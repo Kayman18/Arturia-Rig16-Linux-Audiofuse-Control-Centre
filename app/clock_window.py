@@ -12,14 +12,14 @@ from mixer_view import configure_changed
 class ClockWindow:
     def __init__(self,app):
         self.app=app;self.channel=tk.StringVar(value='clock');self.state=None
-        self.pending=None;self.last_read=0;self.choices={};self.apply_buttons={}
+        self.last_raw={};self.pending=None;self.last_read=0;self.choices={};self.apply_buttons={}
         self.window=app.make_panel();self.window.title('AF16Rig — Clock / audio status')
         shell=ttk.Frame(self.window,padding=20);shell.pack(fill='both',expand=True)
         ttk.Label(shell,text='CLOCK / AUDIO STATUS',font=('DejaVu Sans',17,'bold')).pack(anchor='w')
         ttk.Label(shell,text='Clock changes can interrupt audio. Apply a sample rate only with Internal clock and idle audio streams. Your audio application may select its own rate when reopened.',wraplength=950).pack(anchor='w',pady=8)
         self.summary=ttk.Label(shell,text='Reading…');self.summary.pack(anchor='w',pady=8)
-        self.streams=ttk.Treeview(shell,columns=('stream','rate','channels','format','state'),show='headings',height=5)
-        for field,label,width in [('stream','ALSA stream',250),('rate','Configured rate',160),('channels','Channels',90),('format','Format',100),('state','State',120)]:
+        self.streams=ttk.Treeview(shell,columns=('stream','rate','period','buffer','channels','format','state'),show='headings',height=5)
+        for field,label,width in [('stream','ALSA stream',250),('rate','Configured rate',160),('period','Period (frames)',115),('buffer','Buffer (frames)',115),('channels','Channels',80),('format','Format',100),('state','State',120)]:
             self.streams.heading(field,text=label);self.streams.column(field,width=width)
         self.streams.pack(fill='x')
         ttk.Label(shell,text='Device clock settings — decoded from the 16Rig parameter files. Clock validity remains a raw bitmask.',wraplength=950).pack(anchor='w',pady=(16,8))
@@ -68,10 +68,10 @@ class ClockWindow:
         self.state=state;self.last_read=time.monotonic();self.sync_controls();alsa=state['alsa'];rows=[]
         for s in alsa['streams']:
             key='/'.join(s[k] for k in ('card','pcm','substream'))
-            rows.append((key,(s['direction']+' · '+key,f"{s['rate_hz']:,} Hz" if s['rate_hz'] else '—',s['channels'] or '—',s['format'] or '—',s['state'])))
+            rows.append((key,(s['direction']+' · '+key,f"{s['rate_hz']:,} Hz" if s['rate_hz'] else '—',s.get('period_size') or '—',s.get('buffer_size') or '—',s['channels'] or '—',s['format'] or '—',s['state'])))
         self.update_rows(self.streams,rows)
         self.update_rows(self.registers,[(k,(label,state.get('decoded',{}).get(k,'—'),state['raw'].get(k,'—'))) for k,label in LABELS.items()])
-        self.summary.config(text='DEMO · synthetic stream values' if state['demo'] else 'AF16Rig audio streams' if rows else 'No AF16Rig stream configuration available')
+        self.summary.config(text='DEMO · synthetic stream values' if state['demo'] else 'AF16Rig audio streams · Start playback or recording to see active period and buffer sizes.' if rows and all(s['state']=='Closed' for s in alsa['streams']) else 'AF16Rig audio streams' if rows else 'No AF16Rig stream configuration available')
         messages=list(alsa['errors'])+list(state['errors'].values())
         self.message.config(text=' · '.join(messages) if messages else 'Stable device readback · choose a setting and press Apply.' if state['stable'] else 'Demo mode · no device clock registers read.')
         self.save_button.config(state='normal')
@@ -81,7 +81,9 @@ class ClockWindow:
             all(type(raw.get(k)) is int and 0<=raw[k]<len(ENUMS[k]) for k in CONFIG))
         for field,choice in getattr(self,'choices',{}).items():
             configure_changed(choice,state='readonly' if ready else 'disabled')
-            if not choice.get() and field in raw and type(raw[field]) is int and 0<=raw[field]<len(OPTIONS[field]):
+            if field not in raw:
+                choice.set('')
+            elif self.last_raw.get(field) != raw[field] and type(raw[field]) is int and 0<=raw[field]<len(OPTIONS[field]):
                 choice.current(raw[field])
             configure_changed(self.apply_buttons[field],state='normal' if ready else 'disabled')
         if hasattr(self,'rate_choice'):
@@ -94,9 +96,12 @@ class ClockWindow:
             if hasattr(self,'rate_note'):configure_changed(self.rate_note,text=reason)
             configure_changed(self.rate_choice,state='readonly' if rate_ready else 'disabled')
             configure_changed(self.rate_button,state='normal' if rate_ready else 'disabled')
-            if not self.rate_choice.get() and raw.get('internal_frequency') in range(1,7):self.rate_choice.current(raw['internal_frequency']-1)
+            rate=raw.get('internal_frequency')
+            if rate not in range(1,7):self.rate_choice.set('')
+            elif rate!=self.last_raw.get('internal_frequency'):self.rate_choice.current(rate-1)
+        self.last_raw=raw.copy()
     def apply_rate(self):
-        if self.rate_button.cget('state') not in ('normal','active'):return
+        if self.rate_button.instate(('disabled',)):return
         self.apply('sample_rate')
     def apply(self,field):
         if not self.state or self.pending or not self.app.connected or not self.state.get('stable') or time.monotonic()-self.last_read>3:return

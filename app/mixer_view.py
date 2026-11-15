@@ -789,6 +789,15 @@ def build_console(app):
     style=ttk.Style(root)
     style.theme_use('clam')
     style.configure('.',background=BG,foreground=TEXT,fieldbackground=PANEL)
+    style.configure('TCombobox',fieldbackground=PANEL,foreground=TEXT,arrowcolor=TEXT)
+    style.map('TCombobox',fieldbackground=[('disabled',BG),('readonly',PANEL)],
+              foreground=[('disabled',MUTED),('readonly',TEXT)],
+              selectbackground=[('disabled',BG),('readonly',PANEL)],
+              selectforeground=[('disabled',MUTED),('readonly',TEXT)])
+    root.option_add('*TCombobox*Listbox.background',PANEL)
+    root.option_add('*TCombobox*Listbox.foreground',TEXT)
+    root.option_add('*TCombobox*Listbox.selectBackground','#32616a')
+    root.option_add('*TCombobox*Listbox.selectForeground',TEXT)
     style.configure('Treeview',background=PANEL,foreground=TEXT,fieldbackground=PANEL,rowheight=27)
     style.configure('Treeview.Heading',background='#383c41',foreground=TEXT)
     style.map('Treeview',background=[('selected','#32616a')])

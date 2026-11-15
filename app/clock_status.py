@@ -33,12 +33,12 @@ def alsa_streams(root='/proc/asound'):
             for sub in sorted(pcm.glob('sub[0-9]*'))[:16]:
                 if not re.fullmatch(r'sub\d+',sub.name):continue
                 item={'card':card.name,'pcm':pcm.name,'substream':sub.name,'direction':'Playback' if pcm.name.endswith('p') else 'Capture',
-                      'rate_hz':None,'channels':None,'format':None,'state':'Unavailable'}
+                      'period_size':None,'buffer_size':None,'rate_hz':None,'channels':None,'format':None,'state':'Unavailable'}
                 try:
                     raw=text_file(sub/'hw_params');item['hw_params']=raw
                     if raw.strip()=='closed':item['state']='Closed'
                     else:
-                        for key,pattern in [('rate_hz',r'^rate:\s*(\d+)'),('channels',r'^channels:\s*(\d+)'),('format',r'^format:\s*(\S+)')]:
+                        for key,pattern in [('rate_hz',r'^rate:\s*(\d+)'),('period_size',r'^period_size:\s*(\d+)'),('buffer_size',r'^buffer_size:\s*(\d+)'),('channels',r'^channels:\s*(\d+)'),('format',r'^format:\s*(\S+)')]:
                             match=re.search(pattern,raw,re.M)
                             if match:item[key]=match[1] if key=='format' else int(match[1])
                         item['state']='Configured'
@@ -68,7 +68,7 @@ def snapshot(device,root='/proc/asound'):
     result=dict(channel='clock',utc=datetime.now(timezone.utc).isoformat(),demo=isinstance(device,DemoAF16Rig),
                 alsa=alsa_streams(root),raw={},passes=[],stable=False,errors={},write_requests=0,clock_enums_verified=True,decoded={})
     if result['demo']:
-        result['alsa']={'cards':[{'card':'demo','id':'AF16Rig'}],'streams':[dict(card='demo',pcm='pcm0p',substream='sub0',direction='Playback',rate_hz=48000,channels=32,format='S32_LE',state='DEMO')],'errors':[]}
+        result['alsa']={'cards':[{'card':'demo','id':'AF16Rig'}],'streams':[dict(card='demo',pcm='pcm0p',substream='sub0',direction='Playback',rate_hz=48000,period_size=256,buffer_size=1024,channels=32,format='S32_LE',state='DEMO')],'errors':[]}
         result['raw']=demo_raw(device);result['decoded']=decoded(result['raw']);result['stable']=True
         return result
     if getattr(device,'clock_status_failure',None):result['errors']['native']=device.clock_status_failure;return result
