@@ -2,9 +2,9 @@
 
 An independent Linux desktop control panel for the Arturia AudioFuse 16Rig. Mix analog, ADAT and USB channels, patch sources to destinations, and manage presets stored on the interface. The app reads the rig’s channel names when it connects.
 
-![Main Mix with nine named channel strips and the Phones, Monitor and Main Master outputs](docs/screenshots/main-mix.webp)
+![Main Mix with nine named channel strips and the Phones, Monitor and Main Master outputs](docs/screenshots/main-mix-beta-rc.png)
 
-*Main Mix on a connected 16Rig. Both screenshots are from earlier Linux development builds. The BETA RC places channel PAD beside Mute and Solo.*
+*BETA RC on a connected 16Rig. Each analog strip has Mute, Solo and PAD (P). USB 1/2 sits beside the analog channels, followed by Phones, Monitor and Main Master.*
 
 ## Install on Linux
 
@@ -31,8 +31,6 @@ You can also run it directly with `bash run.sh`, or explore the interface offlin
 - **Front and rear inputs** expose the controls available for the selected source. Linked pairs share a gain knob. The Phones, Monitor and Main Master strips sit together at the right.
 - **Routing** presents a patchbay. Select one of eight cable colours, then drag a cable between compatible jacks.
 - **Presets** reads, names, saves and loads presets on the device. Mixer scenes are files on your computer. Open a scene to preview differences before recalling them. Sample-rate changes require internal clock and idle ALSA streams.
-
-![Earlier Main Mix view with USB 1/2 beside the analog instrument channels and live stereo meters](docs/screenshots/usb-return.webp)
 
 ## BETA RC test results
 
