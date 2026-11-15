@@ -1,0 +1,22 @@
+TEST134 MIDI message types — evidence and behavior
+
+The AudioFuse 16Rig model's param.xml defines MidiTypeList in this order:
+0 CC, 1 Note, 2 Off. Its strip and master MIDI assignment type parameters
+reference that list. These are the correct 16Rig resources, not AF02 resources.
+
+Existing agent callback 0x1404c2990 extracts type bits 14..15; recomposition
+at 0x1404c33d7..0x1404c33e0 combines type<<14, channel<<8 and number.
+The existing write path uses USB OUT 0x40/0x13, parameters 20..34, indexed
+per assignment, with a two-byte little-endian payload. No new opcode is used.
+Agent SHA256: 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+
+The editor permits type-only changes. It checks connection generation,
+firmware/state version 18, stable expected raw state and supported values.
+Reserved bits and type 3 remain unsupported. Writes occur once, followed by
+readback confirmation; failed writes are not automatically retried.
+Existing batch/restore callers preserve the original type bits.
+
+Automated coverage includes all nine type transitions for all 71 assignments,
+invalid types, rejection without retry, label decoding, type-only UI changes,
+and unchanged assignment no-ops. Full suite: 1,159 tests passed.
+Physical hardware and GUI rendering were not verified here.

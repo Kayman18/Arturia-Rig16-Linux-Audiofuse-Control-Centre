@@ -1,0 +1,31 @@
+TEST130 — Live Phones level readback
+
+The Phones strip now displays signed dB from the device and its fader follows
+hardware level changes. It remains read-only: no new USB writes are enabled.
+Unknown/missing reads clear the display rather than showing a stale level.
+Text updates are cached; polling rates and strip geometry are unchanged.
+
+Evidence: AFCC 2.5.0.1665 agent, SHA256
+7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513.
+PE virtual addresses:
+* 0x14049453a TrimPhones registration; 0x140494561 calls 0x1404a3610
+  with param8; helper captures group0.
+* Constructor 0x1404ba4f0 installs read callback vtable0x140d72620.
+* Callback0x1404ccb00 -> 0x1404b9b70 -> 0x14049cde0.
+* 0x14049cde7 sign-extends the 16-bit read; 0x14049ce0c multiplies by
+  constant0x140db3b18 = 0.00390625 (1/256), then clamps to UI metadata.
+* Paired setter callback0x1404cc940 calls encoder0x140477820; encoder
+  multiplies by256 (constant0x140db3d90), clamps signed16, handles -infinity.
+  Setter forwards metadata to0x14048faa0, then virtual transport+0x50.
+  This establishes a candidate setter, NOT device acceptance of a write to
+  the physical Phones level. The app write whitelist remains unchanged.
+
+Readback examples: 63324 -> -8.640625 dB; 62464 -> -12 dB; 0 -> 0 dB.
+0x8000 is presented as minus infinity; drawing stays at the bottom.
+Other finite signed values retain their exact dB label; fader drawing clamps
+at the existing visible -60..0 scale. No claim of calibrated hardware limits.
+Persistent group1/param30 is not interpreted using this conversion.
+
+Next: finish transport/write acceptance for Phones, then clock and stereo
+balance. Immersive/bass-management work is deferred per user request.
+No physical AF16Rig or rendered GUI validation was available for this build.

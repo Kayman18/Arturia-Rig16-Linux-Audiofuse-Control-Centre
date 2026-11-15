@@ -1,0 +1,2 @@
+# Allow the active local desktop user to access AF16Rig control on the MIDI USB device.
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="1c75", ATTR{idProduct}=="af21", TAG+="uaccess"

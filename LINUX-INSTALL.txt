@@ -1,0 +1,21 @@
+TEST154 — Managed Linux installation
+
+Run bash install-desktop.sh to install a standalone per-user copy of the app.
+It now lives under $XDG_DATA_HOME/af16rig-linux-control (normally
+~/.local/share/af16rig-linux-control). The application-menu launcher points to
+this installed copy. The extracted download can be moved or deleted afterward.
+No sudo is needed. System Python, Tk and libusb remain runtime requirements.
+
+Updates: close the running app, extract the new release, and run its installer.
+The installer copies the release before switching the current-version symlink.
+Earlier installed releases are retained. Failed copy/missing assets leave the
+previous current version in place. Reinstalling from the installed copy works.
+User preferences and exported scenes are not removed. Boxed 16 RIG icons and
+window/launcher matching remain included. Main Analog retains USB 1/2 on page 1.
+
+Validation: full suite 1,299 tests passed; Python compilation passed. Installer
+checks cover paths with spaces, deleting the download, updating/reinstalling,
+missing assets and failed copies. The installed run.sh --help was successfully
+executed after deleting the download folder. Live taskbar/GUI verification and
+hardware verification remain pending. This release changes Linux packaging,
+not hardware controls.

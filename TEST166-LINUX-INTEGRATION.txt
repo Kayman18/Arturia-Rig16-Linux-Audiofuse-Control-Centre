@@ -1,0 +1,39 @@
+TEST166 — Linux installation reliability and current GUI checks
+
+The per-user installer now activates the new release only after copying its
+icons and writing the desktop launcher successfully. Icons and launcher files
+are replaced atomically instead of being overwritten in place. Copy, launcher
+or activation failures keep the previous active application selected and clean
+up the incomplete new release and staging files. Previous successful releases
+remain available. Some completed icon updates can remain after a later failure;
+the previous application itself stays active.
+
+The unattended Demo GUI check has been updated for the current Phones level
+control and the Main Mix fit-to-width layout. It now exercises mixer scene save,
+rate matching, fresh preview and setting recall through real Tk widgets when
+run inside a Linux desktop session. Physical USB access is blocked by the check;
+it uses Demo mode and does not require the Rig16. The harness allows additional
+time for the complete scene readback stages.
+
+Validation performed here:
+- 1,388 automated tests passed; Python compilation passed.
+- Simulated mid-icon-copy, launcher replacement and final activation failures
+  preserve the previous active release. Staging files are cleaned up.
+- Installed the real package into a temporary user-data directory, deleted the
+  extracted download, then successfully ran the installed launcher with --help.
+- desktop-file-validate passed for that installed launcher.
+
+Live GUI validation was attempted but blocked: this runtime has no DISPLAY or
+X server. The GUI check reported blocked, not passed. The existing package tool
+could not locate Xvfb. Real Rig16 testing and desktop/taskbar appearance remain
+unverified here. No claim of a real GUI or hardware pass is made.
+
+To run the unattended GUI check on your Linux desktop, from this extracted
+folder: bash test-gui.sh
+It writes AF16Rig-GUI-check.json. No physical button testing is required.
+
+Scene format remains v16. No hardware commands, mixer layout or polling
+frequency changed. MIDI Learn and immersive/bass management remain deferred.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

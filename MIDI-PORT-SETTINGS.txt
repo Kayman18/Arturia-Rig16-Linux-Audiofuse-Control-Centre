@@ -1,0 +1,44 @@
+TEST137 — USB host cable and DIN sync settings
+
+Open MIDI, wait for assignment capture, then choose Ports / sync…
+Added two native device settings:
+- USB Host Cable Number: 1–16 (a USB MIDI cable/port, not message channel).
+- DIN clock mode: 4 PPQN, 24 PPQN, 48 PPQN or Korg.
+
+Refresh reads current device values. Choose a value and Apply; the display
+updates only after matching device readback. Unsupported current values are
+shown as Unknown and cannot be edited. Failed confirmation requires refresh.
+Normal mixer/meter polling rates are unchanged. Port settings use on-demand
+reads. MIDI source routing and learn remain unfinished; immersive functions
+remain deferred. These settings are not included in MIDI assignment backups.
+
+1,187 automated tests passed; Python compilation passed. Physical device and
+rendered GUI verification were not available. Launch with bash run.sh.
+
+
+Protocol evidence (model-specific resources and native agent)
+Agent SHA256: 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+
+param.xml declares MidiUsbHostCableNumberDiscrete using MidiChannelList
+(labels1..16). Its native registration at0x140493ac8 references that exact
+Discrete name and passes parameter6 to0x1404a2890 at0x140493af4.
+MidiDinClockMode has ordered XML items4PPQN,24PPQN,48PPQN,Korg. Registration
+at0x140493b06 passes parameter7 to the same helper at0x140493b32.
+
+Helper0x1404a2890 constructs0x1404ae570, the same enum handler already traced
+for clock settings: writer callback0x1404cd7a0 converts UI enum index at
+0x1404cd93d and calls0x1404ad510. That path passes state group1 to generic
+setter0x14048faa0. AF16Rig device setter0x1407c6eb0 adds0x10 to the group.
+Thus OUT0x40/0x11, parameter6 or7, element0, two little-endian bytes.
+USB-host cable raw index0..15 displays1..16; DIN clock raw index0..3 follows
+XML item order. IN0xc0/0x91 reads the corresponding two-byte words.
+
+No source-routing masks are changed. Both settings have two-read preflight,
+expected-state and connection-generation checks, one OUT maximum, read-only
+confirmation retries and explicit unknown-value handling. Failed or stale
+responses never cause automatic write retries. The popup closes on reconnect
+and shares the MIDI page edit lock with backup/restore and assignment editing.
+
+Tests cover all256 USB-host cable transitions and16 DIN clock transitions,
+exact packets, no-ops, invalid/future/unstable states, rejected/uncertain OUT,
+short reads, disconnects, worker generation checks and retained UI state.

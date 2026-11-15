@@ -1,0 +1,40 @@
+TEST160 — Analog output stereo-link scene recall
+
+PRESETS → Mixer scene files… now recalls output stereo links together with
+levels for pairs 3/4, 5/6, 7/8 and 9/10. Each pair has one preview row showing
+its link status and both levels. New scenes no longer require manually matching
+output links before recall. Mixer source/layout and input hardware links still
+must match.
+
+When needed, recall temporarily unlinks the output pair, restores its individual
+levels, then restores the saved stereo link. Linking happens after both levels
+are equal, avoiding gain mirroring overwriting a different saved value. Mixed
+current link flags can be repaired. A saved mixed link state, or linked pair
+with unequal saved levels, is rejected during planning if it needs recall.
+Such snapshots remain readable and unchanged pairs need no writes.
+
+Pair levels and link flags are checked before and after each operation; layout
+changes also stop recall. Failed or uncertain writes are not repeated or rolled
+back. Earlier confirmed changes remain. Stop takes effect after the current
+pair operation (up to six checked native writes). A complete final scene readback
+checks the result. Output pairs restore before speaker A/B and Monitor controls.
+
+Scene format v13 retains the saved output data shape. Formats v1–v12 remain
+supported with their original behavior: versions containing output levels still
+require matching output links and do not change those links. Their preview rows
+also show the combined pair state.
+
+Validation: 1,340 automated tests passed; Python compilation passed.
+New fake-device checks cover 96 output-pair combinations, all four pairs and
+starting link-bit states, simulated firmware gain mirroring, preservation of
+other outputs, invalid and stale state, partial link failure, unexpected gain
+changes, layout changes, new and legacy scene-controller recall. These tests
+are automated simulations; real Rig16 and live GUI verification remain pending.
+
+Linux installer, boxed 16 RIG icon, USB 1/2 on page 1, accepted mixer layout and
+polling frequency are retained. MIDI Learn and immersive/bass management remain
+deferred. Remaining scene work includes automatic mixer/input source and link
+recall, plus sample rate. Unmapped controls are not implemented.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

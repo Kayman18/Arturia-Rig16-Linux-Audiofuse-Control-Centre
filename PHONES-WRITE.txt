@@ -1,0 +1,40 @@
+TEST131 — Checked Phones level adjustment
+
+Phones now has minus/plus buttons, a draggable fader and numeric entry.
+Adjustment is limited to -60..0 dB. A current in-range readback and supported
+state version18 are required. The strip follows hardware knob changes.
+
+Each adjustment carries the current raw value and connection identity. The
+worker rereads Phones before writing and refuses if it changed. It sends one
+OUT and confirms with IN reads; it never repeats an uncertain OUT. Errors
+remain visible in the Phones strip and detailed status line. Reconnect and
+preset resets discard pending UI state; stale replies cannot restore it.
+Persistent Phones preset parameter30 is untouched.
+
+First hardware check: with Phones already between -60 and 0 dB, press its
+minus button once. Confirm the device level drops by1 dB and the strip says
+Level confirmed. If rejected, retain the error text and save the usual report.
+No repeated mixer/button test batch is needed for this change.
+
+Protocol evidence extends PHONES-READBACK.txt:
+AFCC agent2.5.0.1665, SHA256
+7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513.
+TrimPhones registration0x14049453a/0x140494561 -> helper0x1404a3610(param8,
+index0) -> ctor0x1404ba4f0 -> writer vtable0x140d71ad0/callback0x1404cc940.
+That callback converts through0x140477820 (signed Q8,256units/dB), then calls
+0x1404ba240. At0x1404ba3cb it passes group0; metadata parameter/index go to
+0x14048faa0 at0x1404ba3e0. This dispatches virtual slot+0x50. AF16Rig vtable
+0x140da6bd8+0x50 contains0x1407c6eb0. That wrapper adds0x10 to group, uses
+a two-byte payload, and invokes0x1407c74b0. Hence Phones OUT is bm0x40,
+request0x10,parameter8,index0,two-byte little-endian signed Q8.
+Readback is bm0xC0,request0x90,parameter8,index0,two bytes.
+This is traced original-app behavior; actual firmware acceptance and audible
+response remain unverified until the hardware check above.
+
+Automated coverage: exact native packet/readback, no-op, boundaries, invalid
+inputs, stale knob state, unknown firmware, rejected writes, uncertain OUT,
+disconnection, no retry, raw-write bypass guard, demo parity, UI pending-state,
+old replies, and worker connection mismatch. Existing polling rates unchanged.
+No GUI rendering or actual AF16Rig was available here.
+Next priorities: clock controls and linked stereo balance. Immersive and bass
+management remain deferred.

@@ -1,0 +1,25 @@
+TEST140 — Preferred MIDI operating mode
+
+MIDI > Ports/sync > Preferred MIDI mode: Standalone (0), Hosted (1).
+This is the stored preferred mode, not an independent live connection indicator.
+Reads and writes require state version 18. The app reads twice before writing,
+sends at most one OUT, and requires stable device readback before confirmation.
+No automatic reconnect replay, routing rewrite, or rollback is performed.
+
+Native evidence: AudioFuse Control Center 2.5.0.1665 Agent executable
+SHA256 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+AF16Rig Params XML: MidiPreferredMode has Standalone, Hosted in that order.
+Registration at 0x140493a8a/0x140493ab6: parameter 5, element 0,
+helper 0x1404a2590, constructor 0x1404ab020.
+Writer vtable 0x140d72388 -> callback 0x1404cd370 -> 0x1404aac10.
+0x1404aad3d converts enum to integer; 0x1404aad95 preserves the word.
+0x1404aaefb sets group 1, 0x1404aaf00 passes the word unchanged,
+0x1404aaf10 calls generic scalar setter 0x14048faa0.
+Reader vtable 0x140d726c8 -> 0x1404cdc80 -> 0x1404aa600;
+0x1404aa97c converts the returned unsigned word directly to the UI value.
+Native scalar transport 0x1407c6eb0 -> 0x1407c74b0 uses 2 bytes.
+Read: bmRequestType 0xc0, request 0x91, value 5, index 0, length 2.
+Write: bmRequestType 0x40, request 0x11, value 5, index 0, uint16 LE 0/1.
+
+Validation: automated mock-USB and headless UI tests only. No attached Rig16
+or display server was available. Actual firmware behavior remains unverified.

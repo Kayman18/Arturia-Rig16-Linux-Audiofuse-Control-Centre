@@ -1,0 +1,24 @@
+TEST146 — Aux/Cue controls in mixer scenes and final recall verification
+PRESETS > Mixer scene files now also captures and restores:
+- Aux 1–4 master levels, mutes and pre/post-fader settings (12 settings)
+- Aux stereo links 1/2 and 3/4
+- Cue enable
+Scene file format is now af16rig-mixer-scene-v2. TEST145 v1 files still load and
+restore their original fields only; newly covered controls remain untouched.
+Existing channel levels/pan/mute/solo/sends and Main/Cue master levels remain.
+Aux link writes run last. After the recall batch, the app captures the entire
+active mixer again and compares every saved field before reporting completion.
+If firmware linking or an external edit changed an earlier setting, the result
+is reported as a mismatch. There is no automatic retry or rollback.
+Existing guarded Aux/Cue native commands are reused, including Aux link bits
+1 and 3. No new unverified vendor command has been introduced.
+1262 automated tests passed; Python compile passed. Coverage includes exact
+packets for all 15 fields, unrelated bit preservation, v1 compatibility,
+stale-state rejection and full final-scene confirmation/mismatch handling.
+Physical Rig16 recall and rendered GUI verification remain pending.
+Excluded from these mixer files: input gain/PAD, source layout changes, audio
+routing, Phones/Monitor, names, clocks and hardware preset-slot storage.
+Full-device configuration export/import remains unfinished. MIDI Learn and
+immersive/bass-management remain deferred.
+Run: bash run.sh
+

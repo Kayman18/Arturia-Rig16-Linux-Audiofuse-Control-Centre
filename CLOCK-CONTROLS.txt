@@ -1,0 +1,44 @@
+TEST132 — Decoded clock status and native clock settings
+
+CLOCK now shows Internal / ADAT / Word clock and frequency values in Hz.
+Use the four selectors and Apply buttons for source, word-clock impedance,
+word-clock pass-through and forced SMUX. Clock changes may interrupt audio.
+The currently selected and preferred sources remain separately visible.
+Preferred source is read-only. The clock validity field remains a raw bitmask;
+no unsupported physical-lock claim is made. Linux ALSA configured rates remain
+separate from device frequency readback.
+
+Writes require state version18 and fresh supported settings. The worker checks
+all five configuration values against the displayed snapshot before one OUT,
+then retries only readback. Stale connection requests, changed settings, unknown
+enums and missing/unknown external-source frequency are rejected before OUT.
+No automatic rollback, repeated OUT, or writes on page opening/reconnection.
+Demo state is explicitly synthetic. Native USB acceptance needs hardware review.
+
+Sample-rate selection is not implemented in this release: the supplied XML
+places it on audio-control interface0, entity40 (clock IDs29/2B/2C hex). It is
+not a scalar write to the volatile frequency-code registers. The current Linux
+audio application remains responsible for its configured stream sample rate.
+
+Recovered XML mappings (enum order, zero-based):
+Source:0 Internal,1 ADAT,2 WordClock.
+Frequency:0 Invalid,1 44100,2 48000,3 88200,4 96000,5 176400,6 192000.
+Impedance:0 75 Ohm,1 HiZ. Pass-through:0 Disabled,1 PassThru.
+Double SMUX:0 Normal,1 Force SMUX.
+These come from resources/devices/AudioFuse 16Rig in the newly supplied archive,
+not the previously supplied AudioFuse2 parameter file.
+
+Native binding trace: clock enums at0x140493b82..0x140493c65 call helper
+0x1404a2890 with persistent parameter0/4/1/2,index0. Constructor0x1404ae570
+installs setter vtable0x140d72fb8, callback0x1404cd7a0. At0x1404cd93d the
+UI enum index is converted directly to integer;0x1404cd94a calls0x1404ad510.
+At0x1404ad69b group1 is supplied to common setter0x14048faa0, then native
+AF16Rig virtual slot+0x50 ->0x1407c6eb0 ->0x1407c74b0. Result: bm0x40,
+request0x11,parameter0/4/1/2,index0,two-byte little-endian enum index.
+Readback remains bm0xC0,request0x91,same parameter/index,length2.
+Original agent SHA256:7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513.
+
+The XML also independently confirms TrimPhones -60..0dB, as used byTEST131.
+Phones physical confirmation remains pending. Immersive/bass management is
+still deferred. Next remaining work includes sample-rate transport, linked
+stereo balance and the newly recoverable MIDI type mappings.

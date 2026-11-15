@@ -1,0 +1,41 @@
+TEST163 — Match input sources from a scene preview
+
+PRESETS → Mixer scene files… now offers Match input sources when the active
+input kinds differ from a saved scene. Review the KIND rows, click Match input
+sources, then review the fresh preview before clicking Recall listed settings.
+The source-matching action does not recall gains, PAD, links or mixer settings.
+
+Matching uses the existing pair front-detection/rear-override commands for
+inputs 1/2 and 3/4. Both pairs are planned against live jack detection before
+any writes. Compatible front Line/Mic and mini-jack connections must physically
+be present. Unreachable saved source combinations (including some mixed
+front/rear pairs) require manual connection/source changes; the action does
+not guess or substitute a different source. Unchanged pairs are left alone.
+Other override bits are preserved. Mixer source/stereo layout must still match.
+
+Live source status is checked before each pair switch and read back twice after
+it. Changed connections, stale source state, rejected writes or layout changes
+stop the action without retries or rollback. Earlier source changes remain.
+Stop takes effect after this source-matching operation, at most four checked
+native writes. A fresh full scene capture follows successful matching, and
+setting recall requires a separate click after that new preview. Hardware
+scenes and Demo scenes cannot be mixed.
+
+File format remains v15; no saved fields were added. Older scenes containing
+input source kinds can use this explicit matching step. Their original recall
+scope and link rules remain unchanged. Scenes predating input capture have no
+source-matching action. Polling and mixer layout are unchanged.
+
+Validation: 1,364 automated tests passed; Python compilation passed.
+New tests cover 1,536 planner combinations, exact native commands for both
+pairs and directions, other-bit preservation, rejected writes, an unreachable
+second pair blocking all writes, connection changes, invalid/stale states,
+source match → fresh preview → explicit recall, Stop, older scenes and Demo/
+hardware separation. Real Rig16 and live GUI verification remain pending.
+
+Remaining work includes mixer source/stereo layout recall, sample-rate scene
+support, hardware verification and unmapped controls. MIDI Learn and immersive/
+bass management remain deferred.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

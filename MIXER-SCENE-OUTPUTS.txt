@@ -1,0 +1,33 @@
+TEST151 — Analog output levels in scenes
+
+PRESETS → Mixer scene files… now captures and recalls all eight analog output
+levels (outputs 3–10). Four pair rows show both saved levels and both stereo-link
+bits. Recall requires the saved and current output links to match; it does not
+change links automatically. Link state is checked again throughout each pair
+write. Unsupported/mismatched state blocks recall rather than being guessed.
+
+Exact signed-Q8 output levels are preserved in the −60 to 0 dB range, including
+fractions below the UI's 0.25 dB entry step. The existing numeric entry UI still
+uses its established step. The raw scene path reuses the checked output register
+write and expected-current-level protection.
+
+If a linked write brings its partner exactly to the target, no redundant partner
+write is sent. An unexpected partner change stops recall. Complete final scene
+readback checks for effects on earlier settings. Earlier writes remain on failure;
+there is no automatic rollback or repeated uncertain OUT.
+
+Format v7 adds analog output records. v1–v6 scenes remain compatible and leave
+output levels and output links untouched. Outputs restore after routing/names
+and before speaker B trim and Monitor/Phones settings.
+
+Still excluded: input gain/PAD, automatic source/stereo layout changes, speaker
+A/B enable/selection/output assignment, clocks and hardware preset slots.
+MIDI Learn and immersive/bass management remain deferred.
+
+Validation: 1,294 automated tests passed; Python compile check passed.
+New tests cover all eight native indices and fractional values, legacy v6,
+link mismatch/stale context, linked partner side effects, invalid ranges/shapes,
+and incremental full-scene preview and recall. Hardware and live GUI verification
+remain pending; no AF16Rig was connected here.
+
+Extract into a new folder and run: bash run.sh

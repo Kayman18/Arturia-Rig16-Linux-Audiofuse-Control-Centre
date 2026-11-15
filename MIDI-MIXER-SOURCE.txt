@@ -1,0 +1,41 @@
+TEST138 — MIDI mixer-control source
+
+MIDI > Ports / sync now includes Mixer control source:
+Disabled, DIN, USB Host or USB Device. This selects the MIDI input used for
+main-mixer control and does not rewrite controller assignments.
+
+The current source is read from the device. Apply sends one checked write
+and waits for matching readback. Unknown source codes are shown but disabled.
+USB host cable number and DIN clock mode remain available in the same popup.
+
+1,192 automated tests passed; Python compilation passed. Physical Rig16 and
+rendered GUI verification were unavailable. Launch with bash run.sh.
+DIN output / USB host / sync source routes still require verification of their
+paired bitfield transfers. Immersive/bass-management remains deferred.
+
+
+Native evidence
+AFCC agent SHA256:
+7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+Model-specific param.xml MidiSource_4 declares Disabled,DIN,USB HOST,USB DEVICE
+in that order. Registration0x14049399c..4939bd calls0x1404a2c60.
+The helper fixes element0 and parameter16, then constructs0x1404b2c10.
+Writer vtable0x140d722a8 dispatches via0x1404cd3f0 to0x1404b26a0.
+At0x1404b2927 the UI enum is converted to its index, rounded and converted to
+integer, then0x1404b2960 writes it through0x14048faa0 using group1 at
+0x1404b2aeb..4b2b00. Thus OUT0x40/0x11 parameter16,index0,2LEbytes.
+Read callback0x1404b1ed0 uses the native word directly at0x1404b249c and
+0x1404b2567..4b2572 to select the enum value. IN0xc0/0x91,param16,index0.
+
+Existing expected-state, double-read, connection and no-write-retry checks
+apply. Tests cover all16 source transitions, exact packets, unchanged unrelated
+settings, disabled/unknown values and popup confirmation handling.
+
+Remaining routing research checkpoint
+Source0/1/2/3 registrations use helper0x1404a2ba0 with destination indices
+5/6/7/4 respectively. Writer callback0x1404cd470 calls0x14049a8c0.
+At0x14049ab12..4a it writes UI-index modulo2 to parameter13 and UI-index/2
+to parameter12, using the destination index and group1. These are bitfield
+controls, unlike scalar mixer source16. The USB transport treatment of these
+indexed bitfields still needs tracing before implementation; no such writes
+are enabled by this release.

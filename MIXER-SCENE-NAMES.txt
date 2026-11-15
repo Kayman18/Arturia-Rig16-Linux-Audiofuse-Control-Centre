@@ -1,0 +1,28 @@
+TEST148 — Mixer scenes include equipment names
+
+PRESETS → Mixer scene files… now captures all 60 analog/ADAT input and output
+names alongside mixer levels, pan, switches, Aux settings and output routing.
+Names have separate preview rows and are recalled last. Each name is checked
+against current hardware state before writing, then read back; final full-scene
+verification detects side effects. Confirmed changes refresh mixer labels.
+Blank names and printable UTF-8 are supported. USB mixer sources do not have
+mapped hardware name slots and are not assigned invented name parameters.
+
+Scene format v4 adds names. v1/v2/v3 remain supported and leave names unchanged.
+Capture accepts existing names up to 31 UTF-8 bytes. The existing conservative
+15-byte name-write limit remains: if recall requires changing a longer name,
+preview rejects the whole plan before any writes. Matching long names are OK.
+Each name is captured separately, allowing other worker tasks between names.
+Normal polling rates and fader scaling are unchanged.
+
+Not a full-device preset: source/stereo selection must match before recall;
+input gain/PAD, Phones, Monitor, clock and hardware preset slots remain outside
+this format. MIDI Learn and immersive/bass management remain deferred.
+
+Validation: 1,275 automated tests passed; Python compile check passed.
+Added checks cover native packets for all 60 name IDs, v1/v2/v3 compatibility,
+long-name preflight blocking, invalid/stale values, blank/UTF-8 names, batch
+recall order, final-readback side effects and worker name-cache notifications.
+No connected AF16Rig or live GUI validation was available here.
+
+Extract into a new folder and run: bash run.sh

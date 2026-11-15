@@ -1,0 +1,34 @@
+TEST162 — Front Line/Mic hardware links in mixer scenes
+
+PRESETS → Mixer scene files… now restores the front 1/2 hardware stereo link
+when both inputs already use the same front Line or Mic mode. Existing rear
+hardware-link recall remains supported. Source selection is not changed.
+Mixed Line/Mic, front/rear and mini-jack pairs are not automatically linked.
+
+Unlinking happens before restoring independent input settings; linking happens
+after restoring the matching saved gain/PAD/polarity/HPF and, for front Line,
+Instrument settings. Incompatible linked targets are rejected during preview.
+The complete active-pair state and mixer layout are checked before and after
+the established native link command. A stale state, rejected write or unexpected
+side effect stops recall with no repeated write or rollback. Previously
+confirmed changes remain. A front link operation sends at most one native write.
+Device firmware may still reject a link; real hardware verification is pending.
+
+Format v15 adds front-link recall semantics. Older formats keep their original
+behavior: v14 supports rear-link recall only, and v1–v13 require matching input
+hardware links. Output link recall from v13 and clock recall from v12 remain
+supported. No GUI layout or polling-frequency changes.
+
+Validation: 1,355 automated tests passed; Python compilation passed.
+New checks cover native Line/Mic link and unlink packets, unrelated link-bit
+preservation, rejection without retry, full scene recall in both directions,
+Instrument mismatch, mixed and mini sources, stale source/settings, unexpected
+side effects and v14 rear/output-link compatibility. These checks simulate the
+device; real Rig16 and live GUI verification remain pending.
+
+Remaining scene work: automatic input source selection, mixer source/stereo
+layout recall and sample rate. Unmapped controls remain unimplemented. MIDI Learn
+and immersive/bass management remain deferred.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

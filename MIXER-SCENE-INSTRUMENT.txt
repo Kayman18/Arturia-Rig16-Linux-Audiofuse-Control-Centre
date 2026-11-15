@@ -1,0 +1,25 @@
+TEST157 — Front Line/Instrument mode in scenes
+
+PRESETS → Mixer scene files… now captures and recalls Line/Instrument mode on
+front inputs 1 and 2 when those front jacks are active. Other input modes show
+N/A; scenes cannot force an Instrument setting onto rear, mic or mini inputs.
+Writes reuse the checked front_line_instrument control, preserving unrelated
+packed bits. Source and hardware-link context are rechecked before each write.
+Both members retain separate settings, followed by full-scene verification.
+
+Scene format v10 adds Instrument mode. v1–v9 remain supported and leave this
+setting unchanged. Existing gain/PAD/polarity/HPF recall remains included.
+Phantom power is not mapped in the current backend and is not added by this
+release. Automatic source/layout/link recall, speaker A/B enable/selection/
+assignment and clock recall remain outstanding. MIDI Learn and immersive/bass
+management remain deferred.
+
+Validation: 1,315 automated tests passed; Python compilation passed.
+New tests cover both native front-jack packet addresses, on/off readback and
+unrelated-bit preservation; v9 compatibility; inactive-mode and invalid-value
+rejection; incremental preview/recall and stale-source cancellation.
+Hardware and live GUI verification remain pending.
+
+Linux installation, boxed 16 RIG icon and USB 1/2 on page 1 are retained.
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

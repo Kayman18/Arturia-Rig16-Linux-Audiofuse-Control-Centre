@@ -1,0 +1,11 @@
+{
+  "audiofuse_16rig_params_Params.xml": {
+    "sha256": "e3aa475a8723798a258b3eb4a3c8844b03e679aaea3f2d65269ef9836deccee6"
+  },
+  "audiofuse_16rig_params_Volatiles.xml": {
+    "sha256": "9c690acfd5a8eb8c84d2916f7524bc3f9161a65ea2933e211b7e6a21760becfe"
+  },
+  "param.xml": {
+    "sha256": "3349bf4d22a2f708d02e243a71b6c919e233f0073ff8f2247e010e5e8c1025be"
+  }
+}

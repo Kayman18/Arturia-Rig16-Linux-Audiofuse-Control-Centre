@@ -1,0 +1,596 @@
+{
+  "source": "AudioFuse 16Rig UI firmware 2.0.1.90",
+  "sha256": "7ce6e262ff88de521cb4f5687c07af83c4394b9efb623011027cba4e0a341c5e",
+  "descriptor_address": "0x080d6fbc",
+  "notes": "Statically recovered descriptors; type 3 denotes packed switches, type 5 includes signed gain arrays. Word count describes storage, not necessarily UI-channel count. Only implemented mappings are hardware validated.",
+  "parameters": [
+    {
+      "id": 0,
+      "name": "iIMPEDANCEWORDCLOCK",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 1,
+      "name": "iPASSTHRUWORDCLOCK",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 2,
+      "name": "iCLOCKSRCSELECTED",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 3,
+      "name": "iCLOCKSRCPREFERRED",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 4,
+      "name": "iFORCEDOUBLESMUX",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 5,
+      "name": "iMIDIPREFERREDMODE",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 6,
+      "name": "iMIDIUSBHOSTCABLENUMBER",
+      "wire_type_code": 4,
+      "storage_word_count": 1
+    },
+    {
+      "id": 7,
+      "name": "iMIDIDINCLOCKMODE",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 8,
+      "name": "iMIDISOURCEUSBDEVICEJACK1",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 9,
+      "name": "iMIDISOURCEUSBDEVICEJACK2",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 10,
+      "name": "iMIDISOURCEUSBDEVICEJACK3",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 11,
+      "name": "iMIDISOURCEUSBDEVICEJACK4",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 12,
+      "name": "iMIDISOURCEUSBHOSTJACK1",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 13,
+      "name": "iMIDISOURCEDINJACK1",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 14,
+      "name": "iMIDISOURCEDINJACK2",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 15,
+      "name": "iMIDISOURCEDINCLOCK",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 16,
+      "name": "iMIDISOURCEAFSSMIXERCTRL",
+      "wire_type_code": 4,
+      "storage_word_count": 1
+    },
+    {
+      "id": 17,
+      "name": "iPHASEFRONTMIC",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 18,
+      "name": "iPHASEFRONTLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 19,
+      "name": "iPHASEBACKLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 20,
+      "name": "iINPUTGAINBACKLINE",
+      "wire_type_code": 5,
+      "storage_word_count": 16
+    },
+    {
+      "id": 21,
+      "name": "iINPUTGAINMINIFRONTLINE",
+      "wire_type_code": 5,
+      "storage_word_count": 2
+    },
+    {
+      "id": 22,
+      "name": "iINPUTLINKFRONTLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 23,
+      "name": "iINPUTLINKFRONTMIC",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 24,
+      "name": "iINPUTLINKBACK",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 25,
+      "name": "iMONITORINGBUTTONMODE",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 26,
+      "name": "iMONOSPEAKERS",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 27,
+      "name": "iDIMSPEAKERS",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 28,
+      "name": "iDIMVALSPEAKERS",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 29,
+      "name": "iMUTEBUTTONMODEUNUSED",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 30,
+      "name": "iDIMVALPHONES",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 31,
+      "name": "iALTSPKENABLE",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 32,
+      "name": "iOUTPUTLINK",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 33,
+      "name": "iOUTPUTGAIN",
+      "wire_type_code": 5,
+      "storage_word_count": 8
+    },
+    {
+      "id": 34,
+      "name": "iMAINMIXCHANSHOW",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 35,
+      "name": "iMAINMIXCHANSTEREOSHOW",
+      "wire_type_code": 3,
+      "storage_word_count": 2
+    },
+    {
+      "id": 36,
+      "name": "iMAINMIXLEVELCHANNEL",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 37,
+      "name": "iMAINMIXPANCHANNEL",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 38,
+      "name": "iMAINMIXMUTECHANNEL",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 39,
+      "name": "iMAINMIXSOLOCHANNEL",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 40,
+      "name": "iSENDCHANNELAUX1",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 41,
+      "name": "iSENDCHANNELAUX2",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 42,
+      "name": "iSENDCHANNELAUX3",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 43,
+      "name": "iSENDCHANNELAUX4",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 44,
+      "name": "iMUTECHANNELAUX1",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 45,
+      "name": "iMUTECHANNELAUX2",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 46,
+      "name": "iMUTECHANNELAUX3",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 47,
+      "name": "iMUTECHANNELAUX4",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 48,
+      "name": "iCUEMIXCHANSHOW",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 49,
+      "name": "iCUEMIXCHANSTEREOSHOW",
+      "wire_type_code": 3,
+      "storage_word_count": 2
+    },
+    {
+      "id": 50,
+      "name": "iCUEMIXLEVELCHANNEL",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 51,
+      "name": "iCUEMIXPANCHANNEL",
+      "wire_type_code": 5,
+      "storage_word_count": 64
+    },
+    {
+      "id": 52,
+      "name": "iCUEMIXMUTECHANNEL",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 53,
+      "name": "iCUEMIXSOLOCHANNEL",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 54,
+      "name": "iLINKSTEREOAUX",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 55,
+      "name": "iPREPOSTCHANNELAUX",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 56,
+      "name": "iMASTERLEVELMAINMIX",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 57,
+      "name": "iMASTERLEVELCUEMIX",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 58,
+      "name": "iMASTERLEVELAUX1",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 59,
+      "name": "iMASTERLEVELAUX2",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 60,
+      "name": "iMASTERLEVELAUX3",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 61,
+      "name": "iMASTERLEVELAUX4",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 62,
+      "name": "iAUXBUSMUTE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 63,
+      "name": "iCUEMODEENABLED",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 64,
+      "name": "iOUTPUTSOURCESELECTION",
+      "wire_type_code": 0,
+      "storage_word_count": 62
+    },
+    {
+      "id": 65,
+      "name": "iCUEDESTOUTPUT",
+      "wire_type_code": 0,
+      "storage_word_count": 2
+    },
+    {
+      "id": 66,
+      "name": "iCONSUMERMODEFRONTMIC",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 67,
+      "name": "iCONSUMERMODEFRONTLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 68,
+      "name": "iCONSUMERMODEBACKLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 69,
+      "name": "iINSTLINEMODE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 70,
+      "name": "iINPUTGAINFRONTMIC",
+      "wire_type_code": 5,
+      "storage_word_count": 2
+    },
+    {
+      "id": 71,
+      "name": "iINPUTGAINCOMBOFRONTLINE",
+      "wire_type_code": 5,
+      "storage_word_count": 2
+    },
+    {
+      "id": 72,
+      "name": "iFORCEREARINPUT",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 73,
+      "name": "iFRONTOUTPUTMODE",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 74,
+      "name": "iGROUNDLIFTOUTPUTS",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 75,
+      "name": "iALTSPKTRIM",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 76,
+      "name": "iALTSPKFEATUREENABLE",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 77,
+      "name": "iALTSPKDEST",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 78,
+      "name": "iIMMERSIVECONTROLS",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 79,
+      "name": "iIMMERSIVEGROUPSCONTROLS",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 80,
+      "name": "iBASSMANAGEMENTMIXLEVEL",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 81,
+      "name": "iIMMERSIVELFECUTOFFFREQUENCY",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 82,
+      "name": "iIMMERSIVEAVDELAY",
+      "wire_type_code": 4,
+      "storage_word_count": 1
+    },
+    {
+      "id": 83,
+      "name": "iIMMERSIVECHANNELTYPE",
+      "wire_type_code": 1,
+      "storage_word_count": 16
+    },
+    {
+      "id": 84,
+      "name": "iIMMERSIVECHANNELDESTINATION",
+      "wire_type_code": 0,
+      "storage_word_count": 16
+    },
+    {
+      "id": 85,
+      "name": "iIMMERSIVECHANNELTRIM",
+      "wire_type_code": 5,
+      "storage_word_count": 16
+    },
+    {
+      "id": 86,
+      "name": "iIMMERSIVECHANNELDELAY",
+      "wire_type_code": 4,
+      "storage_word_count": 16
+    },
+    {
+      "id": 87,
+      "name": "iIMMERSIVECHANNELTEST_UNUSED",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 88,
+      "name": "iIMMERSIVEBASSMANAGEMENTMODE",
+      "wire_type_code": 1,
+      "storage_word_count": 16
+    },
+    {
+      "id": 89,
+      "name": "iIMMERSIVEBASSMANAGEMENTFREQUENCY",
+      "wire_type_code": 4,
+      "storage_word_count": 16
+    },
+    {
+      "id": 90,
+      "name": "iADATOUTPUTGAIN",
+      "wire_type_code": 5,
+      "storage_word_count": 16
+    },
+    {
+      "id": 91,
+      "name": "iMONITORLEVELLOCK",
+      "wire_type_code": 1,
+      "storage_word_count": 1
+    },
+    {
+      "id": 92,
+      "name": "iMONITORREFERENCELEVEL",
+      "wire_type_code": 5,
+      "storage_word_count": 1
+    },
+    {
+      "id": 93,
+      "name": "iCUESELECTIONL",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 94,
+      "name": "iCUESELECTIONR",
+      "wire_type_code": 3,
+      "storage_word_count": 4
+    },
+    {
+      "id": 95,
+      "name": "iHPFFRONTMIC",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 96,
+      "name": "iHPFFRONTLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    },
+    {
+      "id": 97,
+      "name": "iHPFBACKLINE",
+      "wire_type_code": 3,
+      "storage_word_count": 1
+    }
+  ]
+}

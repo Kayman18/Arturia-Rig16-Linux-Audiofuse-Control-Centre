@@ -1,0 +1,33 @@
+TEST159 — Clock configuration in mixer scenes
+
+PRESETS → Mixer scene files… now saves and recalls clock source (Internal,
+ADAT or Word clock), word-clock termination, word-clock thru and Double SMUX.
+The preview shows these as one CLOCK configuration row.
+
+Clock configuration is recalled after the other scene controls. Termination,
+thru and SMUX are set before selecting the clock source. Each changed setting
+uses the existing checked native write and full configuration readback. Before
+any clock writes, external clock targets require a recognized frequency; the
+source setter checks again immediately before switching. Clock changes can
+interrupt audio. Earlier scene changes remain if clock recall fails.
+
+Sample rate is not stored or changed by scenes; use the Clock page for that.
+Preferred source is device-managed and is not written by scene recall.
+No retries of uncertain writes, no rollback. Stop takes effect after the current
+configuration operation (at most four checked writes). Final scene readback
+checks all saved controls. Scene format v12; v1–v11 remain supported and do not
+change clock settings.
+
+Validation: 1,332 automated tests passed; Python compilation passed.
+Fake-device tests cover all 576 clock configuration transitions with exact
+packets and ordering, absent external clock, invalid/stale state, rejected
+writes, unexpected side effects, clock loss before source switching, v11
+compatibility and incremental scene preview/recall. Real hardware and live GUI
+verification remain pending.
+
+Remaining work: automatic source/layout/hardware-link recall; scene sample-rate
+support; unmapped controls and hardware verification. MIDI Learn and immersive/
+bass management remain deferred. Polling and mixer layout are unchanged.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

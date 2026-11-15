@@ -1,0 +1,31 @@
+TEST98 clock protocol evidence
+
+Original agent: AudioFuseControlCenterAgent.exe, AFCC 2.5.0.1665
+SHA256: 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+
+Recovered descriptors give volatile group0 fields9..12 as clock validity,
+internal frequency, ADAT frequency, word-clock frequency. Persistent group1
+fields0..4 are impedance, thru, selected source, preferred source and forced
+double SMUX. Storage is one word per field in the persistent wire table.
+
+Native bindings independently observed with objdump:
+0x140493b82 ImpedanceWordClock -> parameter0 at 0x140493b9b
+0x140493bbd ForceDoubleSmux -> parameter4 at 0x140493bd6
+0x140493bfb PassThruWordClock -> parameter1 at 0x140493c14..19
+0x140493c3b ClockSrcSelected -> parameter2 at 0x140493c54
+0x1404943bb ClockFreqInternal -> volatile parameter10 at 0x1404943cf
+0x1404943f6 ClockFreqADAT -> volatile parameter11 at 0x14049440a
+0x14049442d ClockFreqWCLK -> volatile parameter12 at 0x140494441
+
+0x1404988b2 / 0x1404988fc / 0x140498947 feed these frequency parameters to
+0x140498a90. At 0x140498b35 the resulting value indexes a 32-byte string-table
+entry. Thus these reads cannot be assumed to be frequencies in Hz. The enum
+labels have not been recovered. The binary also imports Windows TUSBAUDIO
+sample-rate/clock APIs; this does not establish a native vendor write path.
+
+Implemented read capture: bmRequestType0xC0, request0x90+group,
+wValue=parameter, wIndex0, length2. Both passes must match for stable status.
+No clock register is written. No values are assigned guessed source/lock
+labels. Linux configured PCM rate is read separately from the matching
+AF16Rig /proc/asound/cardN/pcmNp|c/subN/hw_params; this is not physical lock
+verification. Native enums and writable clock controls remain pending.

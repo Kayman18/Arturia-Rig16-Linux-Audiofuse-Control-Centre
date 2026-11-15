@@ -1,0 +1,22 @@
+TEST153 — Boxed 16 RIG application icon
+
+Added a boxed 16 / RIG icon in the app's cyan/charcoal colours, with PNG sizes
+16–256 and an SVG source. Tk uses the icon for this app and child windows.
+The window class is AF16RigLinuxControl, matching the supplied Linux launcher.
+
+To install the menu/taskbar identity for your user, extract this folder to its
+permanent location, then run:
+    bash install-desktop.sh
+Launch AF16Rig Linux Control from the applications menu. If you pinned the old
+Python/generic icon, remove that pin and pin the new launcher. No sudo needed.
+If you move the folder or extract a later release elsewhere, rerun the installer
+from that folder to update the launcher path. Direct launch remains bash run.sh.
+
+The installer writes only this app's desktop file and icon files in your user
+XDG data directory. It supports spaces in the application path and repeated
+installation. Source code/audio controls/layout/polling are otherwise unchanged.
+
+Validation: Python compile passed; isolated temporary-directory installation
+and repeated installation passed. Icon rendered and visually inspected.
+Live desktop/taskbar verification is pending. This visual update did not rerun
+the unchanged hardware suite (TEST152 baseline: 1,295 passing tests).

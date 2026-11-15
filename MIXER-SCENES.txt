@@ -1,0 +1,25 @@
+TEST145 — Expanded Main/Cue mixer scene files
+Open PRESETS > Mixer scene files…
+Read active mixer settings, save a JSON scene, or open a scene to preview recall.
+Included: Main/Cue channel levels, pan, mute and solo; Main Aux 1–4 send levels
+and send mutes; Main/Cue master levels. Analog, ADAT and USB sources 1–64 are
+supported. Stereo entries retain independent L/R values, including custom pan
+and different levels; recall restores the saved values rather than an offset.
+Recall requires matching source inclusion/stereo layout. A complete preflight
+capture compares against the preview before any write. Each changed control
+then checks current values and topology, writes only changed members, and
+confirms readback. Levels/pans apply before mute/solo/send switches. A failure
+stops recall; earlier changes remain. Stop/Close cancels unsent steps. No retry
+of failed writes or automatic rollback. Capture/recall uses incremental worker
+requests; the polling intervals are unchanged.
+Excluded: source-layout changes, input gain/PAD, routing, Aux master settings,
+Phones/Monitor, names, clocks and device preset storage. Full-device audio
+configuration files remain unfinished. MIDI Learn and immersive functions
+remain deferred. Existing level-only Fader scenes remain available separately.
+1255 automated tests passed; Python compilation passed. New tests include exact
+native packets for every supported channel field across sources 1–64 in both
+buses, independent stereo restore, schema rejection, changed-state guards,
+partial-write failure, and headless preview/preflight/recall UI flow.
+Physical hardware recall and rendered GUI verification remain pending.
+Run: bash run.sh
+

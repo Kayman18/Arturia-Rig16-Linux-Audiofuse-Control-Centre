@@ -1,0 +1,43 @@
+TEST165 — Internal sample rate in mixer scenes
+
+PRESETS → Mixer scene files… now captures the device's Internal sample rate.
+When it differs from a saved scene, Match sample rate applies that rate through
+the existing idle-device ALSA path, confirms device readback and reads a new
+scene preview. Recall listed settings remains a separate action afterwards.
+
+Supported rates are 44.1, 48, 88.2, 96, 176.4 and 192 kHz. Both selected and
+preferred clock must be Internal. AF16Rig audio streams must be closed; close
+or release the device in your DAW/JACK/PipeWire before matching. The app does
+not stop audio services, detach USB drivers or start playback. An audio
+application may choose a different rate when it reopens the interface.
+
+External-clock captures store no Internal rate target. A scene targeting an
+external clock does not request an Internal sample-rate change. If an Internal
+scene is opened while external clock is selected, select Internal on the Clock
+page and refresh the scene preview first.
+
+The action checks the preview rate, uses the established clock-state and ALSA
+idle guards, applies once and confirms the rate after closing the ALSA handle.
+No uncertain apply is retried or rolled back. Stop takes effect after the
+current rate operation. A failed confirmation may leave a changed rate; refresh
+to inspect it. New capture handles any resulting mixer-layout differences.
+
+Scene format v16 adds a sample-rate record. Formats v1–v15 retain their existing
+scope and never request rate matching. Existing hardware-link, source matching,
+layout matching and clock configuration features remain available. Main mixer
+layout and polling frequency are unchanged.
+
+Validation: 1,383 automated tests passed; Python compilation passed.
+New tests cover all 36 rate transitions in Demo, invalid/stale/external states,
+a native-path simulated ALSA apply with device readback, busy-stream rejection,
+match → fresh preview → explicit recall, legacy v15, external-clock scenes,
+Stop and malformed saved rates. Existing ALSA resource cleanup, stream races
+and no-retry checks also pass. Real Rig16 and live GUI verification remain
+pending; simulated checks are not hardware confirmation.
+
+The listed scene-recall feature gaps now have implementations. Remaining work
+is hardware verification, final Linux GUI/install checks, and investigation of
+unmapped controls. MIDI Learn and immersive/bass management remain deferred.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

@@ -1,0 +1,1166 @@
+AF16Rig Linux control protocol — current TEST5 notes
+===================================================
+
+Source agent: AudioFuseControlCenterAgent.exe, AFCC 2.5.0.1665
+SHA256: 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+Preferred PE image base: 0x140000000.
+
+Static recovery
+---------------
+AFSSDevice vtable 0x140da6bd8 selects the AF16Rig model (product getter
+0x1407c8940 returns 0xaf20). The string getter 0x1407c7940 maps group and
+parameter name to an index. The scalar read wrapper 0x1407c6e70 issues request
+0x90+group, parameter in wValue, element in wIndex, length two, timeout 1000 ms.
+TUSBAudioInterface wrapper 0x1407ca550 constructs bmRequestType 0xc0.
+The write wrapper 0x1407c6eb0 uses request 0x10+group with a two-byte word.
+
+Recovered tables (including boundary sentinels):
+  group 0 volatile: 0x140d64b00, 39 entries
+  group 1 persistent: 0x140d65540, 99 entries
+  group 2 names: 0x140d64d70, 77 entries
+  group 3 global: 0x140d65240, 44 entries
+  group 4 production: 0x140d65500, 4 entries
+The JSON preserves numeric indices; MAX_PARAM_VALUE entries are boundaries,
+not parameters to query.
+
+Hardware findings
+-----------------
+TEST1 opened Audio 1c75:af20 but its first scalar read stalled.
+TEST2 checked both USB identities: three initial reads stalled on 1c75:af20;
+all ten reads completed on MIDI 1c75:af21. This is the control target used now.
+Observed state version 18; speaker raw 0xfff4 (signed -12); mute/mono/dim zero;
+A-button state 1; hardware field 1; firmware field 2; audio firmware 0x0201.
+Global-version field 0xffff is not interpreted as a meaningful version.
+
+The user confirmed TEST3 Mute applies but caused an app disconnect.
+TEST3 closed the handle on all errors. TEST4 introduced delayed readback,
+send-once writes and temporary-failure recovery. The user then said it works.
+The precise original error was not captured; a specific USB status code was
+not established as its cause.
+
+Implemented native requests
+---------------------------
+All use VID 1c75 / PID af21, wIndex zero, two-byte little-endian values.
+Mute: group 0, parameter 7; read C0/90, write 40/10.
+Mono: group 1, parameter 26 decimal; read C0/91, write 40/11.
+Dim: group 1, parameter 27 decimal; read C0/91, write 40/11.
+Speaker level: group 3, parameter 0; read C0/93, write 40/13.
+C0/40 and request codes in these four lines are hexadecimal.
+
+Writes require state version 18 and verified values. Each OUT is sent once.
+Readback retries after 50/100/200/400 ms; matching actual state is required
+for success, including when OUT returned an unusual status. Command errors
+retain the handle for refresh. Physical removal or three consecutive polling
+failures closes the connection. USB resets, kernel detachment and interface
+claiming are not used.
+
+TEST5 relative volume control
+=============================
+The user confirmed TEST4 works after the Mute-disconnect fix. TEST5 preserves
+that recovery path and adds speaker-level increments using global group 3 /
+parameter 0, signed 16-bit payloads and one OUT request 0x13 per click.
+
+The current hardware value is read before each increment; the cached UI value
+is not used as the write base. Only +/-1 raw steps inside the software subset
+[-60, 0] are allowed. This range is an application restriction, not a recovered
+native range or dB calibration. No automatic unmute or startup write occurs.
+
+Additional volume investigation found an AFCC UI path at 0x140481a7b that
+sign-extends a UI parameter and scales by 1/256, with -32768 as a sentinel.
+Its exact correspondence to the AFSS global speaker-level field is unresolved;
+it must not be used to label native raw reads as dB. In particular, a USB-audio
+8.8 format and the UI-controller state field may use different representations.
+
+Static analysis of the UI firmware's vendor dispatcher confirms that IN
+requests 0x90..0x94 dispatch scalar reads by group. The callback writes the
+returned value as a 16-bit word. None of this proves a particular acoustic
+volume scale. The user must compare one TEST5 step with the front-panel display
+before a calibrated dB slider is implemented.
+
+TEST5 volume writes are unit-tested and exercised through the GUI in demo
+mode. Physical-hardware volume validation is still pending.
+
+TEST6 fixed-point volume correction
+==================================
+User reports all three existing controls work, but volume reads -2803 and the
+volume buttons do nothing. Their TEST5 report shows successful Mute/Dim/Mono
+write/readback transactions, changing negative speaker-level values, and no
+volume-write attempts. The last raw signed level is -435.
+
+TEST5 compared signed raw levels with [-60, 0], so ordinary signed 8.8 values
+were rejected by the GUI. TEST6 applies the factor 1/256 found in the AFCC
+volume conversion path to display and bounds, and uses 256 raw units per
+relative 1 dB step. Its conservative supported subset is [-15360, 0] raw,
+corresponding to [-60, 0] dB. It preserves fractional values between clicks;
+endpoint steps clamp to that software subset. -32768 is treated as a sentinel.
+
+The supplied report does not itself measure a dB calibration. The conversion
+is grounded in the AFCC scale code and is consistent with the observed raw
+values. The user still needs to compare TEST6's dB display and step behavior
+with the hardware. No claim of a physically tested TEST6 volume write is made.
+
+TEST7 rear-input polarity and HPF
+================================
+The user confirmed TEST6 works. TEST7 preserves its volume encoding and recovery
+and adds indexed boolean controls for the rear-panel input paths.
+
+Static evidence: the AFCC initialization loop at 0x140492330..0x140492495
+registers channels using EBX starting at zero and stops at 16. It maps:
+  ConsumerModeBackLine_ -> persistent ID 68
+  InputGainBackLine_ -> persistent ID 20
+  PhaseBackLine_ -> persistent ID 19
+  HpfBackLine_ -> persistent ID 97
+Both PhaseBackLine_ and HpfBackLine_ use helper 0x1404a2590 (boolean binding).
+TEST7 implements only those two boolean controls. Gain bounds/encoding and
+consumer-mode enum semantics remain unverified and are not written.
+
+UI channels 1..16 map to USB element index 0..15 in wIndex. All commands still
+use 1c75:af21, state version 18, two-byte little-endian values:
+  Polarity: read bm C0 / request 91 / wValue 19 decimal; write bm 40 / request 11.
+  HPF: read bm C0 / request 91 / wValue 97 decimal; write bm 40 / request 11.
+The two wValue IDs above are decimal; bmRequestType and request bytes are hex.
+
+The shared transaction helper now verifies the same indexed field it writes.
+Only explicit input-button actions issue OUT requests. Input selection and
+periodic input reads do not modify state. Input read failures remain isolated
+from monitor polling; unexpected non-boolean values disable input writes.
+
+All rear-input writes remain pending physical-hardware validation. Existing
+monitor controls are confirmed by the user's TEST6 test.
+
+
+TEST8 independent input reads and diagnostics
+=============================================
+User symptom: inputs selectable; polarity button disabled, HPF shows Waiting.
+No hardware report accompanied this symptom. No definite request/encoding
+failure is inferred from it.
+
+TEST7's input_snapshot used an all-or-nothing dictionary comprehension and
+all-fields boolean gate. TEST8 catches a recoverable read failure per field,
+preserves the other read, and attaches raw returned values, per-field errors
+and control_available flags. Device removal continues to propagate.
+
+The input GUI uses per-field availability; completed unreadable fields say
+Unavailable rather than Waiting. A Save report button is available in the
+input window. Packet IDs, element indexing and write encoding are unchanged;
+there are no guessed fallback requests or arbitrary-value writes in TEST8.
+
+A hardware report remains necessary to identify whether the remaining cause
+is unsupported firmware, a read error, non-boolean field representation or a
+mapping issue. Existing monitor control is left intact.
+
+TEST9 packed readback correction — supersedes TEST7/8 scalar input assumptions
+=============================================================================
+TEST7 report: channel 5 phase/HPF reads zero; OUT returns 2, four verification
+reads remain zero. TEST8 report: selecting channel 1 yields phase=16 and
+HPF=65535. Selecting channel 2 yields phase=0 and HPF=65535. The phase=16
+packed word after channel-5 writes is direct evidence for the bit representation.
+
+Firmware static evidence (UI firmware 2.0.1):
+  0x08095b98 forwards a scalar vendor read to the state getter and stores one
+  16-bit result. Its parameter/element getters address packed words.
+  0x0809d4a0 handles an individual bit update: index >> 4 selects a word,
+  index & 0xf selects the bit, BIC/ORR changes it and 0x0809dd48 stores the word.
+  0x0809dd88 independently implements the same indexed bit operation.
+  0x0809d794..0x0809d808 iterates the bits of packed fields for state changes.
+These functions corroborate distinct packed-word and per-bit operations.
+
+Correct rear switch read:
+  bmRequestType C0, bRequest 91, wValue 19 (phase) or 97 (HPF),
+  wIndex 0, length 2. wValue IDs here are decimal; request bytes are hexadecimal.
+  selected_bool = (packed_word >> (ui_channel - 1)) & 1
+For channels 1–16 there is only packed word zero.
+
+Per-channel switch write remains:
+  bmRequestType 40, bRequest 11, same wValue ID,
+  wIndex = ui_channel - 1, little-endian payload 0000/0100.
+Readback verification must return to packed word zero and extract the bit;
+it must not reuse the write's bit index as the read's word index.
+
+TEST9 does not construct or write full bitmasks. It preserves the per-channel
+OUT command supported by the reports, fixes verification, accepts every complete
+16-bit mask (including ffff) and records packed values in snapshots. It does
+not infer or restore the user's previous settings after earlier unconfirmed
+commands. Physical validation of the corrected readback is pending TEST9.
+
+TEST10 rear-line input gain
+==========================
+The user confirmed TEST9. TEST10 adds only rear-input gain; monitor controls
+and packed polarity/HPF decoding remain unchanged.
+
+Static evidence in AFCC 2.5.0.1665:
+  0x140492388..0x1404923c1 registers InputGainBackLine_ with persistent ID
+  20 decimal, passing loop index EBX. The loop ends at 16 (0x140492492).
+  The binding uses helper 0x1404a2710, constructor 0x1404acbf0, getter callback
+  0x1404cd030 -> 0x1404ac270, which invokes conversion 0x14049cde0.
+  0x14049cde7 sign-extends the raw short; 0x14049ce0c multiplies by the double
+  at 0x140db3b18, which is exactly 1/256. Descriptor min/max are applied in
+  that conversion; their full rear-gain range has not been recovered.
+
+TEST10 uses a conservative application subset of 0–12 dB (0..3072 raw), with
++/-256 raw steps. It does not claim that subset is the complete native range.
+
+Rear gain read:
+  bmRequestType C0, bRequest 91, wValue 20 decimal, wIndex channel-1, length 2.
+Rear gain write:
+  bmRequestType 40, bRequest 11, wValue 20 decimal, wIndex channel-1,
+  signed 8.8 little-endian word. The initial subset is nonnegative.
+Unlike switches, gain reads use channel element indices, not packed word zero.
+The shared verification helper selects the matching gain element for readback.
+
+Gain availability/errors are independent from phase/HPF availability. The UI
+captures the channel in each queued command and disables its selector while
+pending. No automatic gain/selection writes occur. Tests verify input 16 gain
+changes leave input 1 unchanged. Physical gain validation remains pending.
+
+TEST11 rear stereo linking
+==========================
+The user confirmed TEST10 gain controls. TEST11 adds persistent ID 24 decimal,
+iINPUTLINKBACK, without changing existing confirmed requests.
+
+AFCC registration at 0x1404925d7..0x14049269a:
+  EBX starts at zero and advances by two up to 16; EDI advances by one.
+  InputLinkBack_<EDI> is bound twice to ID 24, using EBX and EBX+1.
+  Both registrations use helper 0x1404a27d0. This establishes odd/even pairing
+  and that both channel flags are associated with one pair-level UI property.
+
+UI firmware descriptor tables at 0x080d6fbc and 0x080d7854 classify persistent
+ID 24 as type 3 with one storage word, matching the packed switch format.
+Type getter 0x0809d47c reads these two-byte descriptors. Literal references to
+0x080d6fbc occur at 0x080957f8 and 0x08095b1c; the duplicate table is referenced
+at 0x080d75b8. Metadata is exported in recovered-wire-types.json.
+
+Read link mask: bm C0, request 91, wValue 24 decimal, wIndex 0, length 2.
+For selected UI channel c, first bit = 2*floor((c-1)/2), second bit = first+1.
+Equal zero flags -> unlinked; equal one -> linked; unequal -> Mixed.
+Write each channel flag using bm 40, request 11, wValue 24, bit index in wIndex,
+with 0000 or 0100 payload. Request bytes are hex, parameter ID is decimal.
+
+Each flag is reread before deciding whether an OUT is necessary. Individual
+readback and final pair readback are required. Other pair flags are never
+written. If firmware propagates the first change to its partner, the second
+OUT is skipped. Partial failure retains diagnostics and does not trigger an
+automatic rollback or repeated write. Native linked-setting synchronization is
+left to the firmware; the application does not copy gain itself.
+
+Physical stereo-link behavior remains pending the user's TEST11 test.
+
+
+TEST12: investigate rejected stereo link
+======================================
+TEST11 user report: link mask remains fffc; three attempts at bit 0 were
+USB-successful but never applied. No confirmed link change. Monitor remains live.
+
+Further AFCC tracing: dedicated link setter 0x1404ad510 calls 0x14048faa0
+with the same arguments/flag as boolean setter 0x1404aad70. This does NOT
+establish that link needs a full-mask USB command. TEST12 retains bit writes.
+
+Firmware persistent bit validator 0x0809ec60 has a jump table at 0x0809ec74.
+ID24 dispatches to 0x0809ecb6. For channels0/1, 0x0809ed4a checks 0x0809e79c;
+values1/3 are rejected. Source classification at 0x08097ee0 and partner lookup
+0x0809e014 also gate link acceptance at 0x0809ed6e..0x0809eda2; mismatched
+source classes can reject link. These checks establish a possible cause;
+TEST11 did not capture source status so the actual cause is unconfirmed.
+
+0x08097ee0 reads persistent ID72 (force rear input) and volatile ID1 (detect).
+Force-rear bit for channels0..3 selects source code3. Descriptor ID72 is
+packed type3, one word. TEST12 adds explicit Use rear pair/Automatic pair,
+per-bit writes (request11, wValue72 decimal, wIndex channel-1, bool payload),
+packed readback at index0. No link-triggered source change. Only pairs1–2/3–4
+can use it. Report context also reads volatile ID6 front mic state.
+
+Hardware validation pending. Tests cover exact requests, preserving other
+source bits, restoring automatic source detection, rejection diagnostics,
+monitor recovery, and demo GUI interaction. Do not claim a confirmed fix yet.
+
+
+TEST13: separate front links for inputs 1–2
+=========================================
+User confirms rear pair1–2 works when both inputs are rear; front does not.
+TEST12 report confirms pair3–4 linking/unlinking with native propagation.
+
+AFCC native front registrations:
+  0x14049255b..0x140492587: InputLinkFrontLine, persistent ID22 decimal,
+  index R12D=0, using link helper0x1404a27d0.
+  0x140492599..0x1404925c5: InputLinkFrontMic, persistent ID23 decimal,
+  same index0 and helper. Unlike rear pair bindings, front registers one
+  control at index0. TEST13 mirrors that exact single-bit write; it does not
+  synthesize a second front command or require two front bits to agree.
+Read packed word0 and extract bit0. OUT request11(hex), wValue22/23(decimal),
+wIndex0, uint16 bool payload. Source context recorded with each command.
+Native firmware source-class dispatch0x0809ecce uses classes0/2 ->0x0809eda4
+(line ID22), class1 ->0x0809edaa (mic ID23), classes3/4 ->0x0809ed6e (rear ID24).
+The UI exposes front line/mic separately, with firmware determining acceptance.
+Only front inputs1–2 are exposed here; no front mini-input pairing is claimed.
+
+A new Front1–2 panel polls both controls independently, routes errors without
+closing monitor USB, and does not copy source/gain/phantom settings. Front
+physical validation pending. 65 automated tests and demo GUI checks pass.
+
+
+TEST14: source-aware front links and in-panel front detection
+===========================================================
+TEST13 report: force_rear=ffff throughout all six failed front link attempts;
+rear link succeeds in both directions. No source selection command is recorded.
+TEST14 exposes the same explicit source operation inside Front1–2, under the
+label Enable front detection for1–2. It clears ID72 bits0/1 only, readback-verifies
+both, and never links automatically after source changes. No front connection
+means rear remains active even with the force-rear override removed.
+
+Effective source decoder matches firmware0x08097ee0 for channels0/1:
+  force72 bit(channel) set ->rear.
+  Otherwise channel0: volatile1 bit0 ->front line/instrument, bit1 ->mic, else rear.
+  Channel1: volatile1 bit5 ->front line/instrument, bit6 ->mic, else rear.
+  Line-bit priority over mic-bit follows native branch order.
+Only the matching front link is enabled when both effective source classes agree.
+Absent source reads disable front links, independently of rear/monitor controls.
+Backend rechecks context immediately before a front link write. Firmware still
+performs its additional mode checks; source agreement is necessary, not a claim
+that every mic configuration will be accepted. Failures preserve diagnostics.
+No phantom power or input preamp configuration is changed.
+
+73 automated checks include the actual TEST12/13 reported source masks, mixed
+sources, both mic sources, no front connections, stale source prevention,
+source-then-link request sequence, preserving other source bits, previous
+native link transactions and monitor recovery. Demo GUI passes. Physical front
+link and this new source-selection workflow remain unconfirmed.
+
+
+TEST15: front polarity inversion
+===============================
+TEST14-report(1) confirms front line link on/off twice, persistent ID22 index0,
+with force-rear maskfffc and detect49. TEST14 source selection is confirmed.
+Microphone link remains untested because current sources are both front line.
+
+AFCC registration0x1404920de..0x1404920ef binds front mic phase to persistent
+ID17 with loop indexEBX;0x140492136..0x140492149 binds front line phase to
+ID18 with same index. The loop increments at0x140492320 and stops at2.
+Firmware descriptors classify both fields as type3, one packed word.
+TEST15 uses the confirmed packed-bool protocol: request91 reads word0,
+request11 writes a bool at bit index channel-1. Decimal IDs17/18 are distinct
+from rear phase ID19. Source decode selects the corresponding front parameter;
+backend rechecks expected source mode immediately before OUT. No source
+selection is performed by a polarity click. Version18 guards all writes.
+
+Front snapshot records phase1/phase2 only for detected front sources and adds
+phase_line/phase_mic packed masks. Read failures are independent from front
+links and monitor. Failed writes retain the handle except on actual removal;
+OUT commands are never automatically retried. Native linked-setting propagation
+is left to firmware, with polling showing resulting state.
+80 automated tests and demo GUI checks pass, including exact line/mic polarity
+requests, channel indices, preserving other masks, stale sources, source/error
+recovery and front/rear switching. Physical front polarity validation pending.
+
+
+TEST16: front high-pass filter switches
+======================================
+User confirms TEST15 front polarity works for both inputs. This is the baseline
+for the new filter switches; mic link remains untested with the current wiring.
+
+AFCC bindings0x14049218e..0x1404921a1 use persistent ID95 decimal (front mic HPF),
+and0x1404921e6..0x1404921f9 use ID96 decimal (front line HPF), loop indexEBX
+0..1. Metadata namesiHPFFRONTMIC/iHPFFRONTLINE, type3, one packed word.
+Rear HPF remains ID97. Native requests match other packed switches: IN91 at
+word0 extracts selected bit; OUT11 uses wValue95/96(decimal), wIndex(channel-1),
+uint16 bool payload. No cutoff-frequency mapping or frequency value is claimed.
+
+Front snapshot records hpf1/hpf2 from the detected active front path and adds
+hpf_line/hpf_mic packed masks. New HPF fields fail independently of polarity,
+links and monitor reads. Existing polarity and HPF share a switch setter that
+checks channel/mode/bool/version and rereads source state before OUT. Expected
+source mismatch aborts without OUT; no-op avoids OUT. Each command is sent
+once with delayed verification reads. Source selection is never implicit.
+
+GUI groups polarity and HPF into compact per-input controls. Reports retain
+per-field read errors, source context, raw masks and write transactions.
+Native linked-state propagation is left to firmware. 87 automated tests and
+demo GUI checks pass. Physical front HPF confirmation is pending.
+
+
+TEST17: front preamp gain in native integer steps
+================================================
+TEST16 report confirms front line HPF input1/input2 on/off, with all four writes
+confirmed and no errors. Both sources remain line, force-rearfffc, detect49.
+
+Native AFCC registrations0x14049223e..0x140492251 and0x140492296..0x1404922a9
+bind IDs70/71 (front mic/combo front line) with EBX0..1. They use helper
+0x1404a2650 ->constructor0x1404abf10, differing from rear gain helper0x1404a2710.
+Getter vtable0x140d72780 callback0x1404cdc10 ->0x1404ab380;0x1404ab71a zero-
+extends AX,0x1404ab7ac..0x1404ab7bb converts the unsigned integer and passes
+it to the property range mapper0x140435e60. Setter0x1404cdbd0 ->0x1404aba50
+passes through inverse property range mapping0x140435f30 and integer rounding
+at0x1404abc21..0x1404abc26 before generic setter0x1404abc60. Rear gain instead
+uses signed fixed8.8 conversion. TEST17 does not reuse the rear /256 scaling.
+
+Firmware persistent value validator0x0809e828 dispatches IDs70/71 through its
+TBH table at0x0809e83c: ID70->0x0809eb88, ID71->0x0809eb5e. These branches
+check front mic mode and reach0x0809eb6c, which clamps to integer0..55 (0x37).
+Gain storage descriptors are type5, two words. Native manual specifications
+list a55dB gain range for instrument and mic inputs, but absolute display
+calibration and dB-per-native-step are not hardware verified here. UI says
+native gain steps0–55 and requests a one-step comparison before claiming dB.
+
+Read: IN request91, wValue70/71(decimal), wIndex channel-1, two-byte word.
+Write: OUT request11, same value/index, uint16 integer target in0..55.
+The shared write helper now treats rear/front gains as array-valued fields;
+front gain indices are specifically restricted to0..1. Each step reads current
+value first, rechecks expected source, bounds the target, sends OUT once and
+readback-verifies that element. No-op at bounds skips OUT. Unrecognized gain
+values are retained in snapshots, reported and never overwritten by clamping.
+
+Front gain is a separate compact panel that reuses front snapshots and event
+routing. Source/link/filter/polarity settings are not changed by gain commands.
+Firmware may propagate gain when linked; the application does not copy it.
+96 automated checks and demo GUI checks pass; physical front gain validation
+pending. Microphone-path controls remain untested with the user's present
+front line/instrument connections.
+
+
+TEST18: front pad / input-level switches
+=======================================
+User confirms TEST17 front gain works on both inputs. Calibration of the gain
+step against the physical dB display was not separately provided; retain
+native integer-step labeling. Microphone-path validation is still pending.
+
+AFCC agent registrations0x140491fd6..0x140491fe9 bind persistent ID66 decimal
+(iCONSUMERMODEFRONTMIC);0x14049202e..0x140492041 bind ID67 decimal
+(iCONSUMERMODEFRONTLINE). IndexEBX loops0..1. Metadata classifies each as
+type3, one packed word. They use helper0x1404a24d0 ->ctor0x1404aa2a0,
+unlike normal bool helper0x1404a2590 used for phase/HPF.
+
+The inverse representation is statically established:
+  getter vtable0x140d72d08 callback0x1404cde50 ->0x1404a99d0;
+ 0x1404a9d4c tests native AX, raw0 ->float1.0 at0x1404a9d51;
+ nonzero ->float0 at0x1404a9d67. Constant0x140db3b44 is1.0.
+ Setter vtable0x140d72880 callback0x1404cdcc0 converts the UI float,
+ tests AX at0x1404cddf6, SETE DIL at0x1404cddf9, then calls
+ 0x1404a9ff0 with the inverse UI boolean as the native word.
+
+The UI-facing legacy property name is ConsumerMode, not Pad. TEST18 exposes
+native pad raw1 as On, raw0 as Off, rather than copying the inverse consumer
+property value. Association of wire1 with attenuation/Pad On is inferred from
+that inverse consumer-level representation; explicit hardware indicator
+comparison is required before calling the On/Off semantics confirmed.
+Readback alone confirms the bit change, not the label's physical interpretation.
+
+Requests use the existing packed protocol: IN91 word0 extracts selected bit;
+OUT11 wValue66/67(decimal), wIndex channel-1, uint16 bool target. Only those
+front fields are exposed here; rear consumer field68 is not written. Source
+context is reread immediately before OUT. The common front switch helper
+now supports pad as well as phase/HPF, with unchanged bool/version/no-op and
+send-once verification behavior. No source, phantom, gain or filter writes
+are caused by a pad click. Native linked propagation is left to firmware.
+
+Front snapshots add pad1/pad2 and pad_line/pad_mic packed masks. Errors are
+independent of other fields. Gain and pad panel shows separate per-input pad
+buttons without enlarging the filters/link panel. 103 automated checks and
+demo GUI pass. Front pad physical behavior and labels remain unconfirmed.
+
+
+TEST19: rear pad controls for inputs1–16
+=======================================
+User confirms TEST18 front pad controls and On/Off indication. This supports
+the native wire1=Pad On interpretation used for the new rear controls.
+
+AFCC rear registration0x140492356..0x140492369 passes persistent ID68 decimal
+(iCONSUMERMODEBACKLINE), EBX element, helper0x1404a24d0. This is the same
+inverse consumer-mode binding used for the confirmed front pads. The rear
+registration loop increments through16 inputs at0x140492490..0x140492495.
+Metadata: type3, one packed word. No front fields66/67 are reused for rear.
+
+Add rear_pad=(1,68) to supported parameters and pad to INPUT_CONTROLS. This
+reuses existing packed input read/write paths: IN91,wValue68,wIndex0,length2;
+selected bit(channel-1). OUT11,wValue68,wIndex(channel-1),uint16 bool target.
+No full-mask writes. Version18/no-op/source-independent rear-path semantics
+remain consistent with existing rear polarity and HPF. Firmware decides
+whether an inactive rear path accepts edits. No source selection is implicit.
+If native linking propagates a change, readback displays the hardware result.
+
+Rear snapshots add pad, packed_words.pad, per-field availability and errors.
+Rear panel shows a fourth PAD card. Compact per-card details retain visible
+controls and source selection. Pad errors remain isolated from rear gain,
+polarity, HPF, link and monitor. A rejected command is sent once, reread at
+the existing delays, and reported without disconnect unless device removal.
+Front source/pad/gain/filter/mic state is not modified by the app's rear pad
+command. 110 tests and demo GUI pass, including all four rear cards and source
+button visibility. Physical rear Pad behavior/labels still need confirmation.
+
+
+TEST20: correct inverted rear PAD semantics
+==========================================
+User's TEST19 observation: app Pad On corresponds to device indicator unlit;
+clicking the app's Turn off lights the device indicator. TEST19's assumed rear
+wire1=Pad On interpretation was wrong. This feedback supersedes the TEST19
+interpretation. Front pad behavior was previously confirmed; do not change its
+mapping based solely on the new rear observation.
+
+Rear persistent ID68 is active-low for the displayed PAD state:
+  native bit0 ->logical Pad On(1)
+  native bit1 ->logical Pad Off(0)
+The request type, ID and selected bit index are unchanged. Readback must still
+compare native bits with native OUT targets. Only normalization at the rear
+control API boundary is reversed. Do not invert the generic packed read helper
+or other controls, nor the existing front consumer fields66/67.
+
+INVERTED_INPUT_CONTROLS contains only pad. Rear input_snapshot retains raw
+packed_words and adds raw_switches for each successfully read switch, while
+normalizing the displayed pad field. write_input_bool maps a logical request
+to its native target before no-op detection and send-once verification, and
+returns the normalized logical readback to GUI events. Native requested and
+readback_attempts remain raw; rear PAD diagnostics add logical_requested,
+encoding=active_low and channel. Polarity/HPF remain direct booleans.
+
+No read/selection/reconnect operation writes PAD. Opening TEST20 reflects
+existing device state correctly; it does not undo prior clicks or reset settings.
+112 tests pass. Existing rear pad tests now check corrected native targets,
+logical snapshots, non-destructive all-ones handling, preserving other flags
+and no-op behavior in both directions. New mapping regression checks cover
+all16 inputs and explicitly distinguish front pad from rear pad polarity.
+GUI demo checks pass. Additional real-backend GUI integration with simulated
+USB verifies initial Off(native1), Turn on ->OUT0000 ->displayOn, Turn off
+->OUT0100 ->displayOff for inputs5/16, plus external native state refresh and
+front pad preservation. Corrected build's physical confirmation is pending.
+
+
+TEST21: front jack Line / Instrument mode
+=========================================
+User confirms the TEST20 rear PAD correction works. Keep its active-low mapping
+scoped to rear PAD; front PAD retains the previously confirmed mapping.
+
+Native AFCC agent registration0x140492086..0x140492099 binds InstLineMode_
+to persistent ID69 decimal (0x45), EBX index0..1, normal boolean helper
+0x1404a2590. Unlike consumer/PAD fields, this does not use inverse helper
+0x1404a24d0. MetadataiINSTLINEMODE is type3, one packed word. Native main UI
+contains Input CHANNEL_IDX Inst; native API docs define /input/analog/:index/inst
+as a boolean Hi-Z instrument mode for AF16Rig inputs1–2, only for a plugged
+jack. The manual similarly describes the INST button for high-impedance
+instrument signals with quarter-inch front connections.
+
+TEST21 maps raw0 to Line and raw1 to Instrument, using the normal boolean
+binding. Hardware confirmation of this new UI indication/behavior is pending.
+Requests: IN91,wValue69(decimal),wIndex0,len2; extract bit(channel-1).
+OUT11,wValue69,wIndex(channel-1),uint16 bool payload. No consumer/PAD inversion.
+
+front_snapshot adds instrument1/instrument2 only for effective source classline
+(front jack), with packed_words.instrument retained raw. For microphones, rear
+sources or unavailable source status, mode is None and GUI disables it. Native
+read failures are isolated from existing gain/pad/filter/link fields.
+write_front_instrument delegates to the shared front-switch setter with kindline,
+revalidating source status before OUT. It accepts only channels1/2, bool target,
+state version18 and an active front jack. It skips matching flags, verifies
+native bit readback and returns the logical state; no automatic write retries.
+
+Gain and pad panel adds one mode toggle per input. Existing gain/pad controls
+and front filters/link panel retain their paths. No source or phantom command
+is sent by the mode button. Native linked-setting propagation remains in firmware.
+120 automated tests pass, including exact channel commands, preserving the other
+input/masks/gain, mic/rear blocking, stale sources, selected-input-only eligibility,
+field read errors, no-op/version guards and rejection recovery. Native-backend
+GUI with simulated USB verifies Line/Instrument labels against raw bits, exact
+payloads, source gating and the corrected rear PAD. Demo GUI checks also pass.
+Physical Line/Instrument mode validation remains pending.
+
+
+TEST22: analog output level controls
+====================================
+User confirms TEST21 Line/Instrument mode switching works on both front inputs.
+Its normal boolean mapping remains unchanged. All confirmed input/PAD controls
+are retained as the baseline for new output controls.
+
+Native manual page65: PHONES volume indicator is display-only and the physical
+knob must be used. Therefore do not attempt to implement remote phones volume
+by writing volatileiTRIMPHONES. This build instead adds supported analog outputs.
+
+AFCC agent registrations0x140493330..0x140493369 bind OutputGain_ with persistent
+ID33 decimal (0x21), EBX index0..7; loop ends at0x14049338a. Helper0x1404a2710
+is the same signed8.8 gain binding validated for rear gain (getter conversion
+0x14049cde0 divides sign-extended short by256). Firmware descriptor type5,count8.
+Firmware value validator TBH table0x0809e83c dispatches ID33 to0x0809e9bc;
+it accepts uint16(raw+0x3c00)<=0x3c00, equivalent to signed[-15360,0], so
+native output gain range is −60..0dB. No unsigned/front-preamp scaling is used.
+
+OutputGain_0..7 is presented as outputs3..10. This physical-port association is
+inferred from the eight native non-monitor output elements and the manual's
+line-output3–10 numbering. Physical first/last mapping must be verified.
+Read IN91,wValue33(decimal),wIndex=output-3,len2. Write OUT11 at same ID/index,
+uint16 encoding of signed8.8 target. New gain-field readback retains array index,
+which is restricted to0..7. Each ±1dB command rereads current, checks range,
+bounds target, sends OUT once and readback-verifies the same native element.
+No-op at limits skips OUT; unknown/sentinel values are not overwritten.
+
+A dedicated Analog outputs window polls the selected output, while monitor
+polling continues. Existing active pane event plumbing is reused with explicit
+channel='output' and physical output ID. Per-output errors remain isolated
+from monitor. Last output snapshot is separate from last rear/front snapshots
+in reports. Main-window navigation gets its own row so output/front/rear buttons,
+connection status, report save and reconnect remain visible. No stereo-link or
+routing command is added; native linked propagation remains in firmware.
+
+128 tests pass. Real-backend GUI with simulated USB verifies output3 at0dB to
+−1dB and back, output10 at−4.5dB to−5.5dB and back, exact indices/payloads,
+speaker-level preservation, error recovery, report routing and panel navigation.
+Existing PAD/INST checks and demo GUI checks pass. Physical output level and
+first/last physical port mapping confirmation remain pending.
+
+
+TEST23: analog output stereo links
+===================================
+User confirms TEST22 analog output level controls and physical output mapping.
+Its output3–10 native index mapping is the baseline for the new pair control.
+
+Agent AFCC0x1404933a0..0x14049345a binds OutputLink_<EDI> twice using persistent
+ID32 decimal (0x20), elementEBX andEBX+1, normal bool helper0x1404a2590.
+EDI starts0, EBX starts0, increments2; loop stops at8. Thus native elements
+0/1,2/3,4/5,6/7 form output pairs3/4,5/6,7/8,9/10 under the confirmed mapping.
+Firmware descriptoriOUTPUTLINK is type3, one packed word.
+
+Add output_link=(1,32) to supported packed fields, with bit indices0..7 only.
+Read IN91,wValue32(decimal),wIndex0,len2. Each OUT11 uses wValue32,
+wIndex=selected native bit, uint16 bool. Link state is direct (1=linked),
+unrelated to rear-PAD active-low normalization. Full masks are never written.
+
+write_output_link checks supported channel/bool/version, rereads each selected
+flag, skips matches, sends each necessary flag once and verifies its readback.
+Native propagation after the first command causes the partner OUT to be skipped
+if its bit already matches. Final read verifies both bits. Mixed snapshots are
+explicit. If a partial command fails, aggregate diagnostics retain completed
+and failed transactions; no automatic rollback or repeated OUT is attempted.
+No output gain/routing/master-speaker command is issued by a link operation.
+
+output_snapshot now isolates level/link read errors, retaining valid controls
+when the other field fails. It records pair, link_mask, link_bits, link_mixed,
+link_writes_available and field errors alongside existing raw/signed gain.
+The Output window adds a pair label and Link pair/Unlink pair control. A link
+command error preserves valid level controls while polling refreshes link flags.
+Reports retain the dedicated output snapshot and command diagnostics.
+
+136 tests pass, including native-propagated partner updates, first/last pairs,
+preserving other pair/high flags/levels, Mixed repair, independent read errors,
+partial failure, no-op and unsupported state. Native-backend GUI with simulated
+USB verifies3/4 link/unlink from either member,9/10 selection/linking, Mixed
+repair, exact seven expected flag commands, no extra gain writes, link-error
+isolation and report state. Existing levels/PAD/INST and demo checks pass.
+Physical output stereo-link behavior/indication confirmation remains pending.
+
+
+TEST24: speaker dim depth (native two-choice setting)
+===================================================
+User confirms TEST23 output stereo linking. Retain that and all earlier controls.
+Native manual section7.6.2 defines speaker dim depth choices−10dB/−20dB and a
+separate DIM engage switch. No arbitrary dim-gain adjustment is implemented.
+
+AFCC agent0x1404930df..0x1404930f7 binds DimValSpeakers to persistent ID28
+decimal, indexR12D=0, enum helper0x1404a2890. MetadataiDIMVALSPEAKERS is type1,
+one storage word. DIM engage remains persistent ID27, a distinct parameter.
+This is not a signed8.8 gain field. Native enum is0=>−10dB,1=>−20dB.
+
+Firmware0x0809aa92..0x0809aab6 reads persistent ID28, masks to a byte, and
+selects subtraction0xa00 for enum0 or0x1400 for enum1. These are10*256 and
+20*256 in the known signed8.8 level path. The parallel calculation around
+0x0809a22e likewise subtracts0x1400 for1 and branches for0. This statically
+corroborates the manual's two choices; no guess from the integer raw value.
+
+Read IN91,wValue28(decimal),wIndex0,len2. Write OUT11 with the same ID/index
+and uint16 enum0/1. write_dim_depth accepts integer db−10/−20 only, requires
+state version18, rereads current enum and refuses unknown values. Matching
+values skip OUT. Send-once verification compares native enum, with requested_db
+added to diagnostics. It never changes DIM engage27, global speaker level0,
+output gains/links or routing. Existing active DIM applies the changed depth
+through firmware without application-side volume copying.
+
+Monitor settings is a separate active pane. Read/write failures are isolated
+from the main monitor poll and input/output controls. Reports store last_monitor_
+settings separately, including raw enum and decoded dB. GUI highlights the
+current choice, disables unknown/unsupported state, and uses the existing DIM
+button for audition rather than automatically toggling it.
+
+144 tests pass. Native-backend GUI with simulated USB verifies both depth
+choices and raw payloads, no-op commands, external updates, unknown enum65535,
+retaining an already-active DIM flag, explicit main DIM audition on/off, base
+speaker-level preservation, report state, error recovery and layout. Existing
+output link/level, PAD/INST and demo checks pass. Physical dim-depth control
+confirmation remains pending.
+
+
+TEST25: A/B speaker feature and selection
+========================================
+TEST24 report confirms dim-depth enum1(−20dB) and0(−10dB) with successful
+native readback, no errors. Audio audition is not established by that report.
+Retain the tested dim path while expanding monitor settings.
+
+Native AFCC agent registrations:
+ 0x14049315b..0x140493173: AltSpkEnable, persistent ID31 decimal, index0.
+ 0x140493199..0x1404931b1: AltSpkFeatureEnable, ID76, index0.
+ 0x1404931d7..0x1404931ef: AltSpkTrim, ID75, signed8.8 gain helper0x1404a2710.
+ 0x140493215..0x14049322d: AltSpkDest, ID77, index0.
+IDs31/76/77 use enum helper0x1404a2890, type1,count1. ID75 is type5,count1.
+Feature enable76 and current B-selection31 are separate, not GPIO/button mode.
+
+Firmware value validator ID31 dispatches to0x0809e9d0: it reads76 and accepts
+selection writes only if feature76==1. ID77 dispatches to0x0809ea50, range0..3.
+ID75 dispatches to0x0809e9ee, clamping signed gain to±0xc00 (±12dB) via
+0x0809ebe4. ID76 dispatches0x0809ea5c: enabling value1 also checks native
+monitoring state (ID78 controls). The application never overrides these
+firmware configuration conflicts; rejection is readback-verified and reported.
+
+TEST25 scalar requests: IN91,wValue31/75/76/77(decimal),index0,length2.
+Only OUT11 for31 (0=A,1=B) and76 (0=disabled,1=enabled) are exposed.
+Read-only destination0..3 is shown as the established output pairs3–4 through
+9–10; physical confirmation of this A/B destination interpretation is pending.
+Trim reads as signed short/256 and is shown only within recovered±12dB range.
+No destination, trim, dim, volume, routing or speaker-mode command is synthesized.
+Native side effects of enabling/disabling/switching are left to firmware.
+
+monitor_settings_snapshot now reads each field independently and retains valid
+dim depth if A/B reads fail and vice versa. Unknown native values stay raw in
+reports. Activation toward B requires a known destination, trim and selection.
+Selecting A or disabling the feature can still proceed with unknown B context
+when their own state fields are valid. Each write rereads current context,
+requires state version18, skips matches, sends once and verifies the scalar.
+Reports retain ab_context_before with each command. GUI displays the existing
+B pair/trim and stored selection when disabled. Enable preserves the stored
+A/B selection rather than automatically changing to A or B.
+
+153 tests pass. Native-backend GUI with simulated USB verifies Enable, B, A,
+Disable exactly as four scalar writes, with no assignment/trim writes and no
+base-level/dim changes; unknown B context disables activation while valid dim
+controls stay usable; per-field command errors recover without disconnect.
+Existing output link/level, dim, PAD/INST, report and demo GUI checks pass.
+Physical A/B feature, selected-speaker labels and displayed B pair remain
+pending the user's hardware test. No trim/destination edit controls are added.
+
+
+TEST26: editable B-speaker destination and trim
+==============================================
+User confirms TEST25 A/B enable/disable, selection and existing configuration
+display. Extend those mappings; no changes to the established scalar routes.
+
+Destination uses persistent ID77, scalar index0, enum0..3 for output pairs
+3–4,5–6,7–8,9–10. New write_ab_destination accepts physical first output3/5/7/9
+only and converts to enum(first-3)//2. It reads current context and refuses
+unknown destination values. A changed destination is allowed only with known
+A/B state and either feature disabled or Speaker A selected. If B becomes
+active after the UI snapshot, backend reread blocks OUT. No automatic speaker
+switch, feature disable or configuration override is issued. Matching pair is
+a read-confirmed no-op, including when B is active.
+
+Trim uses persistent ID75, scalar index0, signed8.8. The native bindings and
+firmware±0xc00 bounds were recovered in TEST25: ±12dB. step_ab_trim rereads
+native trim, rejects unknown/out-of-range values, adds/subtracts256, bounds
+the target, sends OUT11,wValue75,wIndex0,uint16 target once and verifies it.
+At bounds, no OUT. Destination uses OUT11,wValue77,wIndex0,uint16 enum.
+No gain/trim array index beyond0 is allowed. Both settings require state18.
+Reports retain requested_pair or requested_db and ab_context_before along
+with native requested/readback values. No route/master/input/DIM settings
+are manually copied. Native side effects remain in firmware.
+
+Configure B is a separate compact panel using the existing monitor-settings
+snapshot/poll/report path. The menu previews only; Apply commits the pair.
+The dirty preview survives polling and trim clicks without being committed.
+Destination controls disable while B is active; trim stays available when
+its own value is supported. Per-field command failures disable the affected
+control until readback recovers. Monitor controls provides the explicit way
+to select A, enable/disable A/B, or return to the existing DIM controls.
+
+162 tests pass, covering all four destination enum payloads, active-B and
+stale-state guards, no-op pairs, signed/fractional trim, limits, preserved
+selection/levels/DIM, unknown states, arguments/indices/version and rejected
+commands with no retry/disconnect. Native-backend GUI with simulated USB
+verifies preview without OUT, applying9–10 then restoring5–6,−1dB/back and
+live-B+1dB/back, exact six destination/trim writes, no implicit selection or
+level writes, error recovery, reports, layout and navigation. Prior A/B,
+output link/level, dim, PAD/INST and demo checks pass. Physical destination
+editing and trim behavior still require user confirmation.
+
+
+TEST27: front stereo minijack gain, phase and pad
+================================================
+TEST26 reports confirm B trim command/readback changes and assignment3–4 ->5–6.
+No errors were recorded. Final state: A/B enabled, A selected, B pair5–6, trim0dB.
+Retain that baseline while adding front minijack coverage.
+
+Native AFCC agent binding0x1404922ee..0x140492301 registers InputGainMiniFrontLine_
+with persistent ID21(decimal), EBX0..1, signed8.8 helper0x1404a2710; loop ends
+at0x140492322. Unlike combo front gain70/71 native integer steps, minijack gain
+is signed8.8 and a two-word array. Firmware ID21 shares the0..0xc00 range
+validation reached through0x0809e992, giving0..12dB. Physical input3/4 maps to
+array element0/1; no rear gain20 or combo gain70/71 is used for this path.
+
+The additional native registration loop initializes EBX=2 at0x14049249b and
+ends at4 at0x140492552. ConsumerModeFrontLine_ uses persistent ID67 with
+bit2/3 via inverse-consumer helper0x1404a24d0. PhaseFrontLine_ uses ID18,
+bit2/3, normal bool helper0x1404a2590. This shares packed front words with
+inputs1–2 but different bits. Pad uses the previously confirmed front-family
+wire1=Pad On mapping, not the corrected rear-pad active-low conversion.
+New minijack Pad labels still require direct hardware comparison.
+
+Source decode follows firmware0x08097ee0 for channel indices2/3: force-rear
+ID72 bit(channel-1) ->rear; otherwise volatile detect ID1 bit4 ->source class2
+(front minijack); no detection ->rear. Fresh source checks precede every
+minijack write. Explicit Enable front detection reuses confirmed rear-source
+setter with pair3–4, clearing ID72 bits2/3 only. No implicit source changes.
+
+Gain read/write: IN91/OUT11,wValue21,index=physical channel-3,len2; ±256 steps.
+Switch read: IN91,wValue18/67,index0 packed word. Switch write: OUT11 at same
+ID, bit index physical channel-1, uint16 bool. No full-mask writes. Version18,
+range/argument/no-op guards and send-once readback verification are retained.
+Snapshot isolates gain/switch failures, preserves raw words/source context,
+and exports through last_front_minijack separately from front1–2/rear state.
+The native extra loop establishes phase and Pad; it does not establish extra
+minijack HPF/link registrations, so those controls are not inferred here.
+
+172 tests pass. Native-backend GUI with simulated USB starts with both minijack
+paths forced rear, releases only bits2/3, checks separate gain/polarity/Pad
+commands for3/4 and exact indices/payloads, simulates unplugging/reconnecting,
+restores gains/switches, and preserves combo1–2 flags. Error isolation, source
+state, report routing, all five navigation buttons and panel layout pass.
+Existing demo GUI checks pass. Physical front minijack controls/mapping,
+including Pad On/Off labels, remain pending user confirmation.
+
+
+TEST29: read-only headphone preset/knob mapping capture
+======================================================
+User confirms TEST27 minijack controls pass physical testing. Retain that baseline.
+Native manual section7.2.2 and AFCC Overview describe a physical PHONES volume
+knob with a display-only AFCC indication and an output-level/impedance selector.
+The exact preset label/order is not established by the available text/binary
+strings, so do not assume enum0/1/2 means Low/Standard/High or write arbitrary
+values. No preset setter is added to TEST29.
+
+Native agent0x14049311d..0x140493135 binds DimValPhones at persistent ID30,
+index0, enum helper0x1404a2890. Firmware0x08097966..0x0809798a reads ID30 and
+copies its uint16 into the headphone-related message. TEST29 reads this field
+as a candidate native headphone preset code with no label/dB normalization.
+Agent0x14049454e..0x140494561 binds volatile TrimPhones ID8 using helper
+0x1404a3610 for the physical knob indication. Read its word without assuming
+percent, dB, ADC range or remote-writability.
+
+headphones_snapshot: IN91,wValue30,index0,len2 ->preset_raw;
+IN90,wValue8,index0,len2 ->knob_raw. Each field handles errors independently;
+actual device removal propagates normally. Unknown complete16-bit values are
+retained literally, not treated as known preset names. Neither name is added
+to supported write/boolean/gain fields. Private write helper rejects both.
+
+A read-only Headphones panel under Monitor settings lets the user enter the
+exact label shown on the device and Record current. The worker validates a
+nonempty trimmed label<=80characters, obtains a fresh snapshot, rejects missing
+preset reads, and emits headphone_recorded with sampled_at. It never writes
+hardware state. App keeps dedicated last_headphones and headphone_samples,
+including full labels/raw readings/timestamps/errors. Samples persist across
+pane navigation and are exported independently of the rolling event history.
+The interface deliberately collects arbitrary verbatim labels/choice counts,
+rather than imposing unverified preset names. Raw knob display is diagnostic.
+
+179 tests pass, including exact requests, independent read failures, unknown
+raw values, blocked writes/indices, fresh worker sampling, label validation
+and failed-capture connection preservation. Native-backend GUI with simulated
+USB captures three simulated labels against raw codes2,0,1 (testing that order
+is not assumed), verifies fresh reads versus stale UI, exact saved JSON samples,
+knob changes, error handling, persistence across navigation and no OUT commands
+throughout the entire capture. Existing demo GUI checks pass. Physical field
+readback and preset/knob interpretation remain pending the hardware capture.
+Next step requires the user's labelled report before enabling preset writes.
+
+TEST29 — Main/Cue mixer master faders
+------------------------------------
+Native agent SHA256 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513:
+0x140492dab..0x140492dd7 binds LevelMainMix to persistent ID56 (0x38), index0.
+0x140492de9..0x140492e15 binds LevelCueMix to persistent ID57 (0x39), index0.
+Both use 0x1404a2710, the same signed 8.8 dB binding as recovered output gains.
+IN request0x91, wValue56 or57, wIndex0, length2. OUT0x11, same IDs/index,
+2-byte LE signed 8.8 word. This build uses an explicit adjustment subset
+−60..0 dB, not a claim about the complete native master-fader range.
+Readback outside that range is preserved numerically, with writes unavailable.
+No special interpretation is assigned to extreme raw values.
+One OUT per click, read-only confirmation retries; state version18 required.
+Main and Cue are independent fields and independently readable on errors.
+Reports include last_mixer_masters and write diagnostics in events.
+Headphone label mapping remains unconfirmed without a labelled hardware report.
+
+TEST30 — Aux master levels
+-------------------------
+Native agent SHA256 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513:
+0x140492eeb..0x140492f17 binds MasterLevelAux1 to persistent ID58 (0x3a).
+0x140492f29..0x140492f55 binds MasterLevelAux2 to persistent ID59 (0x3b).
+0x140492f67..0x140492f93 binds MasterLevelAux3 to persistent ID60 (0x3c).
+0x140492fa5..0x140492fd1 binds MasterLevelAux4 to persistent ID61 (0x3d).
+Each binding calls signed 8.8 dB helper0x1404a2710 with scalar index0.
+Reads IN0x91, wValue58..61, wIndex0, length2. Writes OUT0x11, same ID/index,
+2-byte little-endian signed 8.8 word. No packed bits or channel arrays involved.
+Only selected master is written, once per click, with read-only confirmation
+retries. Requires state version18 and current level in build subset−60..0dB.
+No Aux-send, mute, link or routing control is written.
+TEST29 report: main0→−1→−2→−1→0dB, cue0→−1→0dB; all six writes confirmed
+on first readback; no error/disconnected events. This confirms command/readback,
+not physical/audible output behaviour. Aux hardware tests remain unconfirmed.
+
+TEST31 — Aux bus mute flags
+--------------------------
+Native agent0x140492ff0..0x14049304d binds four AuxBusMute properties to persistent
+ID62 (0x3e), indices0..3, using ordinary boolean helper0x1404a2590. The same helper
+binds known MonoSpeakers/DIM controls immediately afterward. No inversion helper.
+UI firmware descriptor0x080d6fbc classifies iAUXBUSMUTE as type3, one packed word.
+IN0x91, wValue62, wIndex0, length2 reads the packed mask. Decode bits0..3.
+OUT0x11, wValue62, wIndex=bus−1, payload uint16LE0/1 changes one selected bit.
+Do not send a whole mask. Preserve high bits and peer bus flags. Readback returns
+to packed word0 and extracts the selected bit. One OUT maximum per command.
+State version18 required, bool arguments only, indices restricted0..3.
+Mute field reads independently of master levels; failure leaves levels usable.
+TEST30 report confirms15 master level writes, including all four Aux buses,
+with no recorded errors/disconnections. Aux mute physical semantics unconfirmed.
+
+TEST32 — Mixer UI responsiveness fix (no backend changes)
+---------------------------------------------------------
+TEST31 report contains8 Aux mute writes: each Aux on and off, all confirmed on
+first readback; no errors/disconnects. Backend af16rig.py is byte-identical to
+TEST31. No PAD changes; apparent front/rear PAD mismatch was user selection.
+Previously MixerMastersWindow used one global pending flag, then erased its
+state on every input_written event, waiting for a full poll to refill the panel.
+Now pending controls are keyed by(bus,operation), others remain interactive, and
+only verified event.actual patches the selected displayed field. Peer readings
+remain visible. Snapshot polls still supply hardware-originated changes.
+Unchanged widget properties are not configured again; fixed widths avoid reflow.
+Error events include operation for per-control invalidation. Failed values are
+retained with error text and unavailable until the next fresh snapshot.
+Serial USB command queue and send-once/readback behaviour remain unchanged.
+Rapid GUI: five independent requests queued, nine exact writes total, no cleared
+values/Waiting transitions, stable geometry and widget identity. All previous
+native backend and GUI regressions pass with per-control pending expectations.
+
+TEST33 — Aux send PRE switches
+-----------------------------
+User confirms TEST32 responsiveness fix. No PAD changes.
+Native agent SHA256 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513:
+0x140492e88..0x140492ec1 binds PrePostChannelAux_ using helper0x1404a2590
+(normal boolean), persistent ID55 (0x37), EBX indices0..3 in a four-entry loop.
+Firmware descriptors classify iPREPOSTCHANNELAUX as packed type3, one word.
+Native manual MAIN MASTER and AFCC mixer sections document four PRE switches.
+IN0x91 wValue55 wIndex0 length2 returns mask; bits0..3 are Aux1..4.
+OUT0x11 wValue55 wIndex=bus−1, uint16LE0/1 addresses only that switch.
+Readback always returns to word0 and extracts the bit. No full-mask writes.
+TEST33 labels logical1 Pre-fader and logical0 Post-fader, consistent with native
+normal boolean PRE binding; physical indicator comparison remains outstanding.
+Snapshot keys: aux_pre_mask, aux_pre, aux_pre_writes_available, errors.
+Report last_mixer_masters includes these fields and events contain readback
+diagnostics. Each PRE control has its own pending/error key; no screen clears.
+Read failures leave level and mute fields independently available. State18 only.
+This build does not expose Aux stereo links or automatically change them.
+
+TEST34 — Aux stereo pairs (single odd-index flag per pair)
+----------------------------------------------------------
+Native agent0x140492e30..0x140492e69 binds LinkStereoAux_ indices0..3, persistent
+ID54 (0x36), normal bool helper0x1404a2590. Descriptor type3, one packed word.
+The four registrations alone do not imply writing two flags per pair.
+UI firmware0x08058cb4..0x08058d10 is decisive: pair index in R1 is doubled by
+0x0809e274 (LSLS R0,#1; UXTH R0; BX LR), then incremented at0x08058cc4.
+That resulting index is used to read ID54's packed bit and, after XOR1, passed
+as selected bit index for the ID54 write at0x08058cfe..0x08058d0c.
+Thus pair0(Aux1–2) uses bit1; pair1(Aux3–4) uses bit3. No bit0/2 writes.
+The same pattern appears0x08058ffe..0x0805904a.0x0809f136 explicitly loads pair1,
+doubles it and adds1, then reads ID54 bit3 for linked-pair behaviour.
+Firmware SHA256 is the descriptor-source7ce6e262ff88de521cb4f5687c07af83c4394b9efb623011027cba4e0a341c5e.
+IN0x91 wValue54 wIndex0 length2 returns the full mask. Decode bits1/3 only.
+OUT0x11 wValue54 wIndex1 or3, uint16LE0/1. One OUT maximum, no full-mask write.
+Private write guard rejects even indices0/2. Other flags and fields preserved
+by the software request; native linked-bus operation remains device-controlled.
+Reports include last_aux_stereo_links(mask,link12,link34,availability/errors).
+Per-pair pending/error state retains stable UI and independent peer controls.
+TEST33 report confirms8 PRE writes on first readback, no errors/disconnects.
+Stereo link physical mapping/behaviour still needs hardware confirmation.
+
+TEST35 — Cue mix enable
+-----------------------
+Native agent0x140493858..0x140493884 binds CueModeEnabled (persistent ID63,0x3f),
+index0 using ordinary boolean helper0x1404a2590. Firmware descriptor type1, one
+word: this is a scalar, not a packed field. Read IN0x91 wValue63 wIndex0 len2.
+Write OUT0x11 wValue63 wIndex0 uint16LE0/1. Preserve all other fields.
+Manual CUE section describes double-click front-panel CUE to toggle activation,
+red indicator when active. AFCC Cue mixer has the corresponding CUE button.
+TEST35 treats0 Off/1 On, requires state18, rejects unknown raw values and checks
+a fresh value before writing. Already-matching value is a read-only no-op.
+Send once, verify by reads only. Errors leave level/Aux controls independent.
+Snapshot/report fields cue_enabled, cue_writes_available and errors.cue_enabled
+are in last_mixer_masters. Events retain exact native write/readback diagnostics.
+Physical Cue indicator/audio behaviour still needs confirmation.
+TEST34 report confirms4 Aux stereo link operations on first readback and no
+errors/disconnects; finalmask0, both pairs unlinked.
+
+Mixer strip research checkpoint (not exposed for writing in TEST35):
+Firmware descriptors main/cue gain IDs36/50 and pan37/51 each hold64 words.
+Main/cue mute38/52 and solo39/53 each hold4 packed words (64 source bits).
+Visibility34/48 has4 words; stereo visibility35/49 has2 words (32 pairs).
+Manual lists16 analog,16 ADAT and32 USB-return sources. Agent bindings near
+0x1404926b0..0x140492951 use EBX channel index directly for channel parameters.
+Physical source-to-index mapping and stereo strip semantics remain under
+investigation before enabling channel writes. No channel controls added here.
+
+TEST36 — Initial Main/Cue mono channel mute (sources1–16)
+---------------------------------------------------------
+User confirms TEST35 looks good; master value-sync concern was withdrawn. No
+master scaling or PAD changes. No separate TEST35 report was provided.
+Native agent registrations: MainMixMuteChannel_ ID38 at0x1404926b0..26e9;
+MainMixLevelChannel_ ID36 at0x14049273c..2799; MainMixChanShow_ ID34 near
+0x14049283a; CueMixLevelChannel_ ID50 at0x1404928f0..2951; CueMixChanShow_ ID48
+near0x1404929f2. EBX is native channel index. Mute/visibility use ordinary bool
+helper0x1404a2590; gain uses signed8.8 helper0x1404a2710.
+Main fields: show34, stereo visibility35, level36, mute38.
+Cue fields: show48, stereo visibility49, level50, mute52.
+Firmware descriptors: mono/mute fields type3 four words(64bits), stereo type3
+two words(32pair bits), level type5 64 words. Manual lists16 analog,16 ADAT,
+32 USB returns and separate mono/stereo selection. TEST36 limits coverage to
+first16 native slots, presented as analog1–16; physical mapping/behaviour still
+requires explicit hardware confirmation rather than relying on static names.
+Read IN0x91: show/stereo/mute word0; level element=source−1.
+Decode mono/mute bit(source−1), stereo visibility bit((source−1)//2).
+Write only mono mute: OUT0x11 wValue38 or52, wIndex(source−1), uint16LE0/1.
+Confirm by returning to word0, extracting that source bit. Never send a mask.
+Inclusion/stereo/level are deliberately absent from the write whitelist.
+Before each write re-read selection; require mono bit1 AND stereo pair bit0.
+State18 required. No auto-add, unlink, level write, solo or USB/ADAT editing.
+Read errors isolated, prior-selection events filtered, failed writes send-once
+and retain readouts until a fresh snapshot. Reports: last_mixer_channel and
+per-command native diagnostics. Main/Cue and source1/16 isolation tests pass.
+
+TEST37 — Mono mixer channel fader steps (sources1–16)
+----------------------------------------------------
+Main channel level ID36 and Cue level ID50 use signed8.8 arrays. Native bindings
+and64-word descriptors are recorded in TEST36 research. Initial scope remains
+indices0..15, presented as analog1–16, same selectors/guards as TEST36 mute.
+IN0x91 wValue36/50 wIndex=source−1 reads level. OUT0x11 same ID/index writes a
+uint16LE signed8.8 target. Confirmation reads the SAME array element index; it
+does NOT decode a packed word or use index0 for all channels.
+Public step checks state18, re-reads mono/stereo selection and current level,
+requires mono selected AND no stereo pair, and restricts current/target to this
+build’s −60..0dB subset. One step256 units. No-op at outward bounds sends no OUT.
+Read-only show/stereo fields remain excluded from write whitelist. Level fields
+join GAIN_FIELDS solely for same-index write/readback support. No inclusion,
+link, preamp, master, mute, pan, solo or send writes accompany level steps.
+Snapshot adds level_writes_available independently from mute availability.
+GUI applies only confirmed signed results, retaining peer readings, and filters
+events from previous selections. Failed writes retain displayed values, disable
+editing until a fresh snapshot, and are not resent.
+TEST36 report reviewed in prior turn:4 Main1/2 mute writes confirmed, no captured
+errors/disconnects. Main1 final−7dB/unmuted, Main2−14dB/muted. Other analog slots
+were stereo-selected. Cue5 absent. This does not confirm Cue mute or level writes.
+265 tests pass including15 new backend/headless UI logic checks. No graphical
+Tk/X test was available in this run; TEST36 baseline graphical evidence remains
+separate. Hardware channel fader stepping requires physical confirmation.
+
+TEST38 channel Solo uses persistent packed fields 39 (Main) and 53 (Cue). Read word zero and address the selected analog source bit for writes. Physical indicator verification pending.
+
+TEST71: first output source editor
+Native descriptor iOUTPUTSOURCESELECTION: group 1, id 64, wire type 0,
+62 storage words. Static names from AFCC tables remain in routing_labels.py.
+Implementation uses one OUT request 0x11, wValue64, wIndex destination, two-byte
+little-endian source code, followed by IN0x91 to the SAME index. Unlike packed
+switches this is a source-code value per array element. This encoding is an
+implementation based on descriptors/general transfer conventions and requires
+physical verification; simulator tests are not evidence of firmware acceptance.
+Supported UI subset: known native destination IDs0..59 and known source labels;
+current source must also be known to allow exact guarded Undo. No Cue editing.
+No retry of OUT on ambiguous completion. Readback retries use existing delays.
+Expected-original check prevents overwriting a route changed since capture.
+Worker connection serial prevents applying a capture from a previous connection.
+
+TEST73 — analog mixer membership
+Recovered descriptors: Main mono show id34/type3/4 words; stereo show id35/
+type3/2 words; Cue mono show id48/type3/4 words; stereo show id49/type3/2 words.
+Uses the existing packed-switch convention: OUT0x11, value parameter id,
+index=analog source-1 for mono or floor((source-1)/2) for stereo, value0/1;
+IN0x91 word0 for analog flag readback. This convention has been verified for
+other packed switches, but these inclusion parameters are not yet physically
+verified. UI exposes analog sources only. Current masks must match readback;
+mode conflicts block the request; other flags are checked after confirmation.
+No implied conversion sequence or automatic reset of channel settings.
+
+TEST94 — full mixer selection masks
+Recovered descriptor evidence documented in TEST35/36/73 establishes mono
+visibility IDs 34/48 as type3 four packed words and stereo visibility IDs
+35/49 as type3 two packed words. The native agent binds channels by index;
+the meter consumer independently identifies analog 0–15, ADAT 16–31 and
+USB inputs 32–63. This build applies that 64-channel ordering to the full
+selection page. Physical digital mapping remains to be confirmed.
+IN 0xc0 request0x91 reads the parameter's word indices (0–3 or 0–1).
+OUT 0x40 request0x11 writes parameter34/48 with bit(source-1), or parameter
+35/49 with bit(floor((source-1)/2)), two-byte boolean payload. A write bit
+index must never be reused as a read word index. Full masks are readback
+comparisons only and never sent as write payloads. State version18 only.
+
+TEST95 digital mixer implementation
+Existing native descriptor evidence in TEST35/36 is used: levels/pans and
+Aux send levels have 64 elements; show/mute/solo/send mute have four packed
+words; stereo has two words. Digital elements 16–31 = ADAT1–16 and 32–63 =
+USB1–32. Reads use word indices for bitfields; writes use channel-bit indices.
+The separate DigitalMixer facade does not broaden analog/preamp validators.
+Meter mapping follows METER-PROTOCOL.txt: ADAT words16–31, USB words68–99.
+No new physical confirmation is claimed by these descriptor-backed tests.
+
+TEST96 ADAT input names
+The recovered group-2 descriptor table assigns iADATINNAME1..16 to IDs28..43.
+Analog input IDs0..15 are unchanged; analog output IDs16..27 are excluded.
+Source IDs17..32 in the mixer/cache map explicitly to name parameters28..43,
+not source-1. Reads retain request0x92, indexed two-byte words and two stable
+passes. Rename retains native string request0x1A, index0, NUL-terminated
+UTF-8, a single OUT and exact readback. Static descriptor mapping plus mock
+USB tests support this extension; ADAT physical verification remains pending.
+
+TEST97 direct digital pair conversion
+Uses the existing TEST94 membership protocol and TEST95 digital snapshots.
+No new parameter IDs or preamp linking semantics are introduced. Each pair
+conversion performs three individually confirmed flag writes. Source17..64
+normalize to odd left member; stereo-bit index=(left-1)//2, mono bits left-1
+and left. Full expected masks are checked before every transition. No rollback
+or uncertain OUT retransmission. Physical conversion remains unverified.
+
+TEST98 clock protocol evidence
+
+Original agent: AudioFuseControlCenterAgent.exe, AFCC 2.5.0.1665
+SHA256: 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+
+Recovered descriptors give volatile group0 fields9..12 as clock validity,
+internal frequency, ADAT frequency, word-clock frequency. Persistent group1
+fields0..4 are impedance, thru, selected source, preferred source and forced
+double SMUX. Storage is one word per field in the persistent wire table.
+
+Native bindings independently observed with objdump:
+0x140493b82 ImpedanceWordClock -> parameter0 at 0x140493b9b
+0x140493bbd ForceDoubleSmux -> parameter4 at 0x140493bd6
+0x140493bfb PassThruWordClock -> parameter1 at 0x140493c14..19
+0x140493c3b ClockSrcSelected -> parameter2 at 0x140493c54
+0x1404943bb ClockFreqInternal -> volatile parameter10 at 0x1404943cf
+0x1404943f6 ClockFreqADAT -> volatile parameter11 at 0x14049440a
+0x14049442d ClockFreqWCLK -> volatile parameter12 at 0x140494441
+
+0x1404988b2 / 0x1404988fc / 0x140498947 feed these frequency parameters to
+0x140498a90. At 0x140498b35 the resulting value indexes a 32-byte string-table
+entry. Thus these reads cannot be assumed to be frequencies in Hz. The enum
+labels have not been recovered. The binary also imports Windows TUSBAUDIO
+sample-rate/clock APIs; this does not establish a native vendor write path.
+
+Implemented read capture: bmRequestType0xC0, request0x90+group,
+wValue=parameter, wIndex0, length2. Both passes must match for stable status.
+No clock register is written. No values are assigned guessed source/lock
+labels. Linux configured PCM rate is read separately from the matching
+AF16Rig /proc/asound/cardN/pcmNp|c/subN/hw_params; this is not physical lock
+verification. Native enums and writable clock controls remain pending.
+
+TEST99 output names and routing display
+Group2 descriptor IDs16..27: iANALOGOUTNAME1..12; IDs44..59:
+iADATOUTNAME1..16. Native agent binds ADATOutName at0x14049528c and
+AnalogOutName at0x14049542d through the name binding helper0x1404a4140.
+This supports named native slots, but does not establish the analog slot
+order relative to speaker/line/headphone routing destinations. That mapping
+is deliberately not applied. ADAT destination12..27 maps to ADAT channel
+1..16 names. Source codes64..95 map to analog/ADAT input names1..32.
+All native IDs remain bounded0..59. USB channel IDs33..64 are not name IDs;
+output cache IDs65..92 keep them separate. String packets remain request0x1A,
+parameter=name ID, index0, NUL-terminated UTF-8; reads remain0x92 words.
+No routing changes are made when displaying or editing equipment labels.
+
+TEST112 stereo pan research (no protocol changes):
+Agent MainMixPanChannel_ string VA 0x140d70660, registration xref
+0x1404927ca; indexed EBX, parameter 0x25 (37), helper 0x1404a2650.
+CueMixPanChannel_ string VA 0x140d70618, xref 0x140492982.
+The generic stereopan string at 0x140d8abf0 has no direct RIP-relative
+LEA/MOV reference in the inspected executable code. Its presence alone does
+not establish AF16Rig stereo behavior. No new stereo pan write is enabled.

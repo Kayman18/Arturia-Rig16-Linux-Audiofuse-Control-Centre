@@ -1,0 +1,39 @@
+TEST161 — Rear-input hardware links in mixer scenes
+
+PRESETS → Mixer scene files… now restores rear-input hardware stereo links
+for all eight analog pairs, provided both members are already using rear inputs.
+These are hardware preamp links, separate from the mixer stereo-strip layout.
+Input source selection, front hardware links and mixer layout still must match.
+
+For a link-state change, unlinking runs before restoring independent input
+settings; linking runs after the saved gain/PAD/polarity/HPF settings are restored.
+Link targets require consistent flags and matching gain/PAD/polarity/HPF values
+on both members. Preview rejects incompatible targets rather than guessing
+which side should win. Existing linked-state recall behavior is retained when
+the link itself does not change.
+
+Each link operation checks the complete saved active-input pair state before
+and after the existing native link writer. Changed sources, mixer layout,
+settings or unexpected side effects stop recall. There is no write retry or
+rollback. Partial writes remain; later scene steps are not sent. Stop applies
+after the current link operation, which sends up to two checked native writes.
+Final full scene readback verifies the saved scope.
+
+Format v14 adds rear-link recall semantics while retaining the existing file
+shape. Formats v1–v13 remain supported with their original input-link matching
+requirement. Output link recall from v13 and clock recall from v12 remain intact.
+
+Validation: 1,348 automated tests passed; Python compilation passed.
+New tests check exact native packets for link and unlink on all eight pairs,
+preservation of other pairs, complete scene-controller batches in both
+directions, operation ordering, stale sources/settings, incompatible targets,
+unexpected side effects, partial failure stopping later writes, preflight
+changes and v13 compatibility. Real hardware and live GUI verification remain
+pending; simulated checks are not hardware confirmation.
+
+Remaining scene work: automatic input source/front-link and mixer-layout recall,
+and sample rate. Unmapped controls remain unimplemented. MIDI Learn and
+immersive/bass management remain deferred. Mixer layout and polling unchanged.
+
+Close the app, extract and update: bash install-desktop.sh
+Then launch AF16Rig Linux Control from the application menu.

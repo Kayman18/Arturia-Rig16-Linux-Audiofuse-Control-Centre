@@ -1,0 +1,37 @@
+AF16Rig live-meter evidence — TEST76
+Source: AudioFuseControlCenterAgent.exe
+SHA256: 7a6b805d11170c9f35731b40f83c48efacfd248edc95c7baf6c6e01faad13513
+
+At VA 0x140495c34..0x140495c57 the native worker zeroes wValue and
+wIndex, requests 0xec bytes using request 0xc0 and the read wrapper
+0x1407c73a0. Successful data is passed to 0x14049ce50 at 0x140495c67.
+The same read wrapper implements the already confirmed scalar requests.
+
+The consumer loads little-endian unsigned 16-bit words. Its mappings:
+Word slots  0..31: Input 0..31 (analog then ADAT)
+           32..39: Analog Output 0..7
+           40..41: Speakers Left/Right
+           42..43: Phones Left/Right
+           44..59: ADAT Output 0..15
+           60..61: Mixer Output Main L/R
+           62..65: Mixer Aux Bus 0..3
+           66..67: Mixer Output Cue L/R
+           68..99: Input 32..63 (USB)
+         100..101: Loopback Left/Right
+         102..117: Immersive Channel 0..15
+
+Native input update helper 0x14049dd50 multiplies the unsigned word by
+float at 0x140db3910: 0.000030518509447574615 (approximately 1/32767).
+The other meter consumers use the same multiplier. No signed-Q8 gain
+interpretation is applied to meter values. Full unsigned range is retained.
+
+The new UI treats normalized values as amplitude and displays 20*log10(value)
+clamped to [-60,0], with clip at >=full scale and amber at >=-6 dBFS.
+This display calibration requires hardware confirmation; transport addresses
+and native normalization are recovered, not guessed. The meters measure
+input signal and bus output, not software fader settings. No post-fader
+per-channel meter or exact analog dBu calibration is claimed.
+
+Implementation is read-only; unsupported state versions are not queried.
+No USB scanning, alternate requests or automatic retries after meter error.
+Normal device polling continues, and reconnect permits one fresh attempt.

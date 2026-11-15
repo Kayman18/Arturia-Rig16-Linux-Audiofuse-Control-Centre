@@ -1,0 +1,41 @@
+TEST143 — Idle-device sample-rate selection
+CLOCK now has a Sample rate selector and Apply rate button for 44.1, 48,
+88.2, 96, 176.4 and 192 kHz. Select Internal clock; all AF16Rig ALSA playback
+and capture streams must be closed. The page explains why rate edits are disabled.
+This Linux implementation uses ALSA hardware PCM configuration, not guessed
+vendor writes or a detached USB driver. It sends no audio and starts no playback.
+An exact rate is requested; unsupported rates fail instead of silently rounding.
+The PCM is closed and the Rig16 frequency registers must confirm the rate twice.
+No retry of the ALSA apply or automatic rollback occurs. No audio services stop,
+and no PipeWire/JACK/DAW configuration is modified. When an audio application
+reopens the interface, it can choose its own sample rate.
+1233 automated tests passed; Python compile and ALSA library bindings passed.
+No hardware or GUI-render verification available; actual rate switching needs
+physical confirmation. Sample rate can alter available channels at high rates.
+Run: bash run.sh
+MIDI Learn and immersive/bass management remain deferred. Full configuration
+file export/import remains outstanding.
+
+Implementation evidence and scope
+The supplied 16Rig param.xml declares the six rates under audio-control
+interface 0, entity 40, type sample-rate. It is not a volatile-register setter.
+Linux ALSA owns that USB audio interface. This implementation opens its raw
+hw:N,0 PCM nonblocking, constrains interleaved S32_LE with exact rate, chooses
+the hardware minimum channel count, and applies snd_pcm_hw_params once.
+All handles and parameter allocations are released, including error paths.
+Two preflight clock reads and another just before applying reject changed state.
+ALSA status is checked before opening and immediately before configuration.
+These checks cannot lock unrelated applications out of opening other streams;
+ALSA errors or changed post-configuration readback are surfaced as unconfirmed.
+No claim is made that idle rate persists after a power cycle or stream reopen.
+
+Primary API references:
+https://www.alsa-project.org/alsa-doc/alsa-lib/group___p_c_m.html
+https://www.alsa-project.org/alsa-doc/alsa-lib/group___p_c_m___h_w___params.html
+Kernel USB clock implementation:
+https://github.com/torvalds/linux/blob/master/sound/usb/clock.c
+
+Automated coverage: all 36 demo rate transitions; exact ALSA rate arguments;
+closed/busy/missing/ambiguous card states; clock and stream changes before apply;
+backend setup/apply failures; resource cleanup; no audio start/write; no automatic
+retry; readback mismatch; stale UI connections; and single-flight UI actions.

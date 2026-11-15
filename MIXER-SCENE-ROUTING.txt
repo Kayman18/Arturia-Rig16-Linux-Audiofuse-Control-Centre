@@ -1,0 +1,23 @@
+TEST147 — Mixer scenes include audio output routing
+
+PRESETS → Mixer scene files… now captures and restores all 60 mapped audio
+output routes alongside the existing Main/Cue mixer and Aux settings.
+The preview shows destination and source names. Routes apply after mixer
+settings and Aux links, with stale-state checks before each write and a
+complete scene readback afterward. Capture remains incremental between worker
+commands; normal polling rates are unchanged.
+
+Scene format v3 adds routing. Existing v1/v2 scenes remain supported and leave
+routing unchanged. Reserved/unmapped output slots 60–61 are never written.
+Unknown source codes cause capture/validation to fail rather than guessing.
+Match the mixer source/stereo layout before recall. Input gain/PAD, Phones,
+Monitor, names, clock settings and hardware preset slots remain outside this
+scene format. MIDI Learn and immersive/bass management remain deferred.
+
+Validation: 1,268 automated tests passed; Python compile check passed.
+New tests cover all 60 native output-route packet addresses, reserved-slot
+preservation, legacy scenes, invalid codes, stale state, incremental preview/
+recall and final readback detecting an unrelated route changed by a write.
+No connected AF16Rig or live GUI validation was available here.
+
+Extract into a new folder and run: bash run.sh
