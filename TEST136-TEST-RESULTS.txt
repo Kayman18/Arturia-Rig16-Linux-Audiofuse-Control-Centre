@@ -1,5 +1,0 @@
-python3 -m unittest discover -s AF16Rig-Linux-Control-TEST136
-Ran 1176 tests in 7.800s
-OK
-Python compileall: passed
-Hardware and rendered GUI not verified.

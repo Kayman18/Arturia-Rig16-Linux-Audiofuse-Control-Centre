@@ -1,5 +1,0 @@
-python3 -m unittest discover -s AF16Rig-Linux-Control-TEST137
-Ran 1187 tests in 7.859s
-OK
-Python compileall: passed
-No hardware or rendered GUI verification.

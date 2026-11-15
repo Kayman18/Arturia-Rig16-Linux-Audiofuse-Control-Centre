@@ -1,2 +1,0 @@
-1153 automated tests passed. Final stereo pan checks:13 passed. Python compilation passed.
-No rendered GUI or physical device verification.

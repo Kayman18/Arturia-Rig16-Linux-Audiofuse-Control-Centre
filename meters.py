@@ -1,7 +1,7 @@
 """Read-only AF16Rig meter frame, recovered from AFCC's native consumer.
 
 Request C0, value/index zero, 236 bytes (118 little-endian unsigned words).
-AFCC normalizes each word by 32767. See METER-PROTOCOL.txt for evidence.
+AFCC normalizes each word by 32767.
 """
 import ctypes as C
 import math

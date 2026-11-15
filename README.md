@@ -34,17 +34,13 @@ You can also run it directly with `bash run.sh`, or explore the interface offlin
 
 ![Earlier Main Mix view with USB 1/2 beside the analog instrument channels and live stereo meters](docs/screenshots/usb-return.webp)
 
-## Validation and scope
+## BETA RC test results
 
-BETA RC is based on TEST167. Its automated suite passed 1,388 tests, and the desktop demo passed all 61 GUI checks on CachyOS with Python 3.14 and Tk 8.6. The remaining hardware check is a scene recall covering input sources, stereo links and sample-rate readback. Installed launcher and taskbar icon appearance still need a desktop confirmation.
+| Check | Result |
+| --- | --- |
+| Automated suite on the BETA RC source | 1,388 passed |
+| Desktop GUI on the TEST167 base used for BETA RC | 61 of 61 passed on CachyOS, with zero callback errors (Python 3.14.9, Tk 8.6.16) |
+
+Two physical desktop checks remain: confirm a scene recall on the 16Rig (input sources, stereo links and sample rate), and confirm the installed app's menu entry and taskbar icon on the desktop.
 
 MIDI Learn and immersive/bass management are outside this release. Phantom-power control remains unmapped.
-
-To repeat the automated checks:
-
-```sh
-python3 -m unittest discover
-bash test-gui.sh
-```
-
-Run the second command from a graphical desktop. It exercises the real Tk interface in demo mode, blocks physical USB access and writes `AF16Rig-GUI-check.json` in the application folder.

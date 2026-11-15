@@ -1,5 +1,0 @@
-python3 -m unittest discover
-Ran 1169 tests in 7.687s
-OK
-python3 -m compileall -q .: passed
-No attached hardware or GUI rendering validation.

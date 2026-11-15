@@ -150,7 +150,7 @@ class AF16Rig:
             if not self.handle:
                 self.close()
                 raise DeviceError('Cannot open AF16Rig MIDI (1c75:af21). Check the connection '
-                                  'and USB permissions; see README.txt.')
+                                  'and USB permissions; see README.md.')
             try:
                 self.version = self.read('state_version')
             except Exception:

@@ -1,4 +1,4 @@
-"""Native AF16Rig preset slots. See DEVICE-PRESETS-PROTOCOL.md for evidence.
+"""Native AF16Rig preset slots.
 
 No preset write is retried. USB completion plus current-slot/dirty readback
 confirms the observed device state, not power-cycle persistence.
