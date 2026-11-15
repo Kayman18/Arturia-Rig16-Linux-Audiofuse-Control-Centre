@@ -19,13 +19,13 @@ def atomic_copy(source,destination):
     finally:temporary.unlink(missing_ok=True)
 
 def install(source=None,data_home=None):
-    source=Path(source or Path(__file__).resolve().parent).resolve()
+    source=Path(source or Path(__file__).resolve().parents[1]).resolve()
     data_home=Path(data_home or os.environ.get('XDG_DATA_HOME') or Path.home()/'.local/share')
     launcher=source/'run.sh'
     if any(c in str(source) for c in ('\n','\r')):raise ValueError('Application path cannot contain line breaks')
     if not launcher.is_file():raise FileNotFoundError(launcher)
     # Validate assets before touching an existing installation.
-    for required in ('af16rig_gui.py','app_icon.py','run.sh','icons/'+ICON_NAME+'.svg',
+    for required in ('app/af16rig_gui.py','app/app_icon.py','run.sh','icons/'+ICON_NAME+'.svg',
                      *(f'icons/af16rig-{n}.png' for n in (16,24,32,48,64,128,256))):
         if not (source/required).is_file():raise FileNotFoundError(source/required)
     data_home=data_home.expanduser().resolve()
